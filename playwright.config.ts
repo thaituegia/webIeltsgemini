@@ -44,7 +44,7 @@ export default defineConfig({
     env: {
       DATABASE_PATH: join(tmpdir(), `ielts-compass-e2e-${process.pid}.sqlite`),
       NODE_ENV: "test",
-      APP_ORIGIN: "http://127.0.0.1:5173",
+      APP_ORIGIN: "",
       OPENAI_API_KEY: "",
       IELTS_OPENAI_API_KEY: "",
       ELEVENLABS_API_KEY: "",
