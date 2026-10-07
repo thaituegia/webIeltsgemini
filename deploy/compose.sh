@@ -12,11 +12,20 @@ if [[ ! "$project" =~ ^[a-z0-9][a-z0-9_-]{0,62}$ ]]; then
   printf '%s\n' 'Invalid project name in private deploy.env.' >&2
   exit 1
 fi
+compose_arguments=(--project-name "$project" --env-file "$config_file" -f "$deploy_dir/compose.yaml")
+domain_override="$root_dir/.local/deploy/domain.compose.yaml"
+if [[ -e "$domain_override" || -L "$domain_override" ]]; then
+  if [[ ! -f "$domain_override" || -L "$domain_override" ]]; then
+    printf '%s\n' 'Refusing a redirected or invalid domain override.' >&2
+    exit 1
+  fi
+  compose_arguments+=(-f "$domain_override")
+fi
 case "${1:-}" in
   validate)
     shift
     if (( $# != 0 )); then exit 2; fi
-    exec docker compose --project-name "$project" --env-file "$config_file" -f "$deploy_dir/compose.yaml" config --quiet
+    exec docker compose "${compose_arguments[@]}" config --quiet
     ;;
   ps|logs|build|up|stop|start|restart|exec) ;;
   down)
@@ -32,4 +41,4 @@ case "${1:-}" in
     exit 2
     ;;
 esac
-exec docker compose --project-name "$project" --env-file "$config_file" -f "$deploy_dir/compose.yaml" "$@"
+exec docker compose "${compose_arguments[@]}" "$@"
