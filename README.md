@@ -100,6 +100,8 @@ Unit/API tests dùng MongoDB thật với database UUID riêng, bao gồm owner 
 
 ## Production
 
+VPS có nhiều project: dùng [bộ triển khai riêng](deploy/README.md), với một cổng HTTPS đã kiểm tra trống, MongoDB/network/volume tách riêng và scripts kiểm tra trước khi chạy. Bộ cấu hình đã được kiểm tra Bash/Compose/nginx trong cloud; cần kết nối SSH và kiểm tra server đích trước khi gọi là đã triển khai.
+
 ```sh
 npm ci
 npm run build

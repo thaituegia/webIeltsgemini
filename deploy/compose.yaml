@@ -1,0 +1,91 @@
+services:
+  mongo:
+    image: mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c
+    restart: unless-stopped
+    command: ["mongod", "--bind_ip_all", "--wiredTigerCacheSizeGB", "0.25"]
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - database
+    mem_limit: ${IELTS_MONGO_MEMORY:-768m}
+    cpus: ${IELTS_MONGO_CPUS:-0.75}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping: 1}).ok === 1 ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - ../.local/deploy/app.env
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      MONGODB_URI: mongodb://mongo:27017/ielts_ai
+      APP_ORIGIN: https://${IELTS_PUBLIC_HOST:?Set IELTS_PUBLIC_HOST}:${IELTS_PUBLIC_PORT:?Set IELTS_PUBLIC_PORT}
+      TRUST_PROXY: "true"
+      MAX_LEARNERS: "2"
+      DEMO_ENABLED: "false"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - web
+      - database
+    mem_limit: ${IELTS_APP_MEMORY:-768m}
+    cpus: ${IELTS_APP_CPUS:-1.0}
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  proxy:
+    image: nginx:1.28-alpine@sha256:a8b39bd9cf0f83869a2162827a0caf6137ddf759d50a171451b335cecc87d236
+    restart: unless-stopped
+    ports:
+      - "${IELTS_BIND_ADDRESS:-0.0.0.0}:${IELTS_PUBLIC_PORT:?Set IELTS_PUBLIC_PORT}:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../.local/deploy/tls:/etc/nginx/tls:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - web
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mongo_data:
+
+networks:
+  web:
+  database:
+    internal: true
