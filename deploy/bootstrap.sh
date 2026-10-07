@@ -26,7 +26,10 @@ for required in curl sha256sum tar mktemp date awk ss df free sort comm cmp open
 done
 docker info >/dev/null 2>&1 || die 'Docker chưa có hoặc chưa hoạt động. Không tự cài/restart Docker vì có thể ảnh hưởng project khác.'
 docker compose version >/dev/null 2>&1 || die 'Thiếu Docker Compose v2. Không tự nâng cấp Docker.'
-docker compose up --help | awk '/--wait([ =]|$)/ {found=1} END {exit !found}' || die 'Docker Compose chưa hỗ trợ --wait. Không tự nâng cấp.'
+compose_up_help="$(docker compose up --help)" || die 'Không đọc được các tùy chọn Docker Compose. Chưa build.'
+for compose_option in --wait --wait-timeout; do
+  printf '%s\n' "$compose_up_help" | awk -v ielts_option="$compose_option" '$1 == ielts_option {found=1} END {exit !found}' || die "Docker Compose chưa hỗ trợ $compose_option. Không tự nâng cấp."
+done
 build_help="$(DOCKER_BUILDKIT=0 docker build --help 2>/dev/null)"
 for flag in --memory --memory-swap --cpu-period --cpu-quota; do
   [[ "$build_help" == *"$flag "* ]] || die "Docker không hỗ trợ giới hạn build $flag. Dừng thay vì build không giới hạn."
@@ -48,9 +51,16 @@ disk_kib="$(df -Pk /opt | awk 'NR==2 {print $4}')"
 docker_root="$(docker info --format '{{.DockerRootDir}}')"
 disk_kib="$(df -Pk "$docker_root" | awk 'NR==2 {print $4}')"
 [[ "$disk_kib" =~ ^[0-9]+$ ]] && (( disk_kib >= 8 * 1024 * 1024 )) || die 'Kho Docker cần ít nhất 8 GiB trống. Chưa tải hoặc build.'
-cores="$(getconf _NPROCESSORS_ONLN)"
-load="$(awk '{print $1}' /proc/loadavg)"
-awk -v load="$load" -v cores="$cores" 'BEGIN {exit !(load < cores * 0.8)}' || die 'Server đang bận (load cao). Dừng để tránh làm chậm project cũ; thử lại lúc ít tải.'
+host_cpu_count="$(getconf _NPROCESSORS_ONLN)"
+host_load_average="$(awk '{print $1}' /proc/loadavg)"
+[[ "$host_cpu_count" =~ ^[1-9][0-9]*$ && "$host_load_average" =~ ^[0-9]+([.][0-9]+)?$ ]] || die 'Không đọc được tải CPU của server. Chưa build.'
+# Names must not collide with awk keywords such as GNU awk's `load`.
+load_state="$(awk -v ielts_load_average="$host_load_average" -v ielts_cpu_count="$host_cpu_count" 'BEGIN {print (ielts_load_average < ielts_cpu_count * 0.8 ? "ready" : "busy")}')" || die 'Không kiểm tra được tải CPU. Chưa build.'
+case "$load_state" in
+  ready) ;;
+  busy) die 'Server đang bận (load cao). Dừng để tránh làm chậm project cũ; thử lại lúc ít tải.' ;;
+  *) die 'Kết quả kiểm tra tải CPU không hợp lệ. Chưa build.' ;;
+esac
 
 say 'Đang lưu hiện trạng và kiểm tra tài nguyên; chưa thay đổi các project đang chạy.'
 install_dir="$(mktemp -d "/opt/websiteIeltsAi-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
@@ -81,7 +91,7 @@ verify_existing() {
   snapshot_containers > "$audit_dir/after.containers" || return 1
   snapshot_listeners > "$audit_dir/after.listeners" || return 1
   cmp -s "$audit_dir/before.containers" "$audit_dir/after.containers" || return 1
-  comm -23 "$audit_dir/before.listeners" "$audit_dir/after.listeners" > "$audit_dir/missing.listeners"
+  comm -23 "$audit_dir/before.listeners" "$audit_dir/after.listeners" > "$audit_dir/missing.listeners" || return 1
   [[ ! -s "$audit_dir/missing.listeners" ]]
 }
 on_exit() {
@@ -129,7 +139,8 @@ bash deploy/compose.sh up -d --no-build --wait --wait-timeout 300 > "$audit_dir/
 
 site_url="https://$public_ip:$port"
 curl_site() {
-  curl --silent --show-error --connect-timeout 10 --max-time 30 --cacert .local/deploy/tls/site.crt --resolve "$public_ip:$port:127.0.0.1" "$@"
+  # This request is resolved to this VPS's loopback, even with a proxy set.
+  curl --silent --show-error --connect-timeout 10 --max-time 30 --noproxy "$public_ip,127.0.0.1,localhost" --cacert .local/deploy/tls/site.crt --resolve "$public_ip:$port:127.0.0.1" "$@"
 }
 say 'Đang kiểm tra HTTPS, MongoDB, dữ liệu, đăng nhập và file giao diện.'
 curl_site --fail "$site_url/api/health" -o "$audit_dir/health.json"
