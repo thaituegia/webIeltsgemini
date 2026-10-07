@@ -31,7 +31,8 @@ build_help="$(DOCKER_BUILDKIT=0 docker build --help 2>/dev/null)"
 for flag in --memory --memory-swap --cpu-period --cpu-quota; do
   [[ "$build_help" == *"$flag "* ]] || die "Docker không hỗ trợ giới hạn build $flag. Dừng thay vì build không giới hạn."
 done
-limits="$(docker info --format '{{.MemoryLimit}} {{.CpuCfsQuota}} {{.CpuCfsPeriod}} {{.SwapLimit}}')"
+# Go-template field names use the CPU acronym; the JSON keys use Cpu.
+limits="$(docker info --format '{{.MemoryLimit}} {{.CPUCfsQuota}} {{.CPUCfsPeriod}} {{.SwapLimit}}')" || die 'Không đọc được khả năng giới hạn tài nguyên từ Docker. Chưa build.'
 [[ "$limits" == 'true true true true' ]] || die 'Docker/kernel chưa hỗ trợ đủ giới hạn RAM, swap và CPU. Chưa build.'
 [[ -d /opt && ! -L /opt ]] || die '/opt phải là thư mục thật, không phải symlink.'
 available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
