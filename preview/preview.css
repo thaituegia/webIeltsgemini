@@ -1,0 +1,59 @@
+.preview-page {
+  --preview-height: 44px;
+  padding-top: var(--preview-height);
+}
+.preview-banner {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--preview-height);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 16px;
+  background: #e6ecd9;
+  color: #294536;
+  border-bottom: 1px solid #cbd8bd;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.preview-banner strong {
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.preview-page .sidebar,
+.preview-page .sidebar-backdrop {
+  top: var(--preview-height);
+}
+.preview-page .app-shell,
+.preview-page .auth-page,
+.preview-page .app-loading {
+  min-height: calc(100vh - var(--preview-height));
+}
+.preview-page .auth-tabs,
+.preview-page .auth-form,
+.preview-page .auth-form-wrap > .muted {
+  display: none;
+}
+.preview-page .auth-form-wrap > h2::after {
+  content: "Chọn một hồ sơ mẫu để xem và thử các tính năng.";
+  display: block;
+  margin-top: 16px;
+  font:
+    400 14px/1.6 Inter,
+    system-ui,
+    sans-serif;
+  letter-spacing: normal;
+  color: #7a8278;
+}
+@media (max-width: 600px) {
+  .preview-page {
+    --preview-height: 60px;
+  }
+  .preview-banner {
+    gap: 10px;
+    font-size: 10px;
+  }
+}

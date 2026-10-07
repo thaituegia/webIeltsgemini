@@ -201,7 +201,7 @@ function AuthPage({
   return (
     <div className="auth-page">
       <section className="auth-story">
-        <a href="/" className="brand">
+        <NavLink to="/dashboard" className="brand">
           <span className="brand-icon">
             <Compass size={26} />
           </span>
@@ -209,7 +209,7 @@ function AuthPage({
             IELTS <b>Compass</b>
             <small>YOUR WAY FORWARD</small>
           </span>
-        </a>
+        </NavLink>
         <div className="auth-story-content">
           <span className="eyebrow">MỖI NGÀY MỘT BƯỚC TIẾN</span>
           <h1>

@@ -4,6 +4,12 @@ Website luyện IELTS bằng **React 19 + TypeScript + Vite** và **Node.js 24 +
 
 Yêu cầu chức năng được triển khai từ tài liệu “Prompt Web Luyện Thi IELTS”. React + Node.js được dùng theo yêu cầu trực tiếp của chủ dự án, thay cho Next.js trong tài liệu. API AI chạy hoàn toàn phía server; trình duyệt không nhận khóa API.
 
+## Xem preview ngay
+
+Tải [bản preview HTML](docs/preview/index.html) rồi mở bằng Chrome, Edge hoặc Firefox. Chọn **Học viên 01** hoặc **Học viên 02** để thử giao diện, kiểm tra đầu vào, bài luyện và từ vựng; không cần cài Node.js. Dữ liệu preview chỉ lưu trong trình duyệt, không đồng bộ với tài khoản thật. Các dịch vụ AI chưa kết nối và Writing/Speaking không tự tạo điểm band.
+
+Chạy `npm run build:preview` để tạo lại file HTML từ giao diện React và logic bài mẫu hiện tại. Xem [hướng dẫn preview](docs/preview/README.md) để biết giới hạn của bản này.
+
 ## Chạy tại máy cá nhân
 
 Yêu cầu Node.js **24 trở lên** (dùng SQLite tích hợp trong Node), npm và một trình duyệt hiện đại.

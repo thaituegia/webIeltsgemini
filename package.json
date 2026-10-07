@@ -11,9 +11,11 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
+    "build:preview": "tsx scripts/build-preview.ts",
     "typecheck": "tsc --noEmit",
     "start": "tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
+    "test:preview": "tsx scripts/test-preview.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
