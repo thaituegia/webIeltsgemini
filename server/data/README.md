@@ -1,26 +1,45 @@
-# Ngân hàng học liệu authored v1
+# Ngân hàng học liệu IELTS v3
 
-Các văn bản, số liệu, hội thoại và ví dụ được biên soạn cho dự án. Địa danh, dự án và số liệu trong case studies là hư cấu phục vụ luyện tập; không phải bản tin nghiên cứu thực tế. Không sử dụng ngân hàng Cambridge hay đề IELTS chính thức.
+Phần mở rộng dựa trên danh mục trong `Tong_hop_cac_dang_bai_IELTS.docx`, được AI biên soạn trực tiếp thành dữ liệu của dự án. Không cần API key để seed bộ học liệu này. Địa danh, nhân vật, dự án và số liệu là hư cấu phục vụ luyện tập; không phải báo cáo nghiên cứu thực tế hoặc đề IELTS chính thức.
 
-Kết quả kiểm tra `tsx scripts/audit-content.ts`:
+| Kỹ năng | Bài cũ | Thêm bài | Tổng bài | Đề cũ | Thêm đề | Tổng đề |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Reading | 48 | 96 | 144 | 8 | 16 | 24 |
+| Listening | 48 | 96 | 144 | 8 | 16 | 24 |
+| Writing | 24 | 48 | 72 | 4 | 8 | 12 |
+| Speaking | 24 | 48 | 72 | 4 | 8 | 12 |
+| Grammar | 16 | 32 | 48 | 0 | 0 | 0 |
+| Tổng | 160 | 320 | 480 | 24 | 48 | 72 |
 
-| Kỹ năng   | Lessons | Full mocks |
-| --------- | ------: | ---------: |
-| Reading   |      48 |          8 |
-| Listening |      48 |          8 |
-| Writing   |      24 |          4 |
-| Speaking  |      24 |          4 |
-| Grammar   |      16 |          0 |
-| Tổng      |     160 |         24 |
+Vocabulary: giữ 216, thêm 432, tổng 648 mục từ. Placement: giữ 192, thêm 384, tổng 576 câu; Reading/Listening và bốn mức CEFR cân bằng trong phần mới. Các ID cũ và liên kết vocabulary của bài cũ được giữ lại. Seed chỉ upsert ba collection học liệu, không xóa tài khoản, attempts, flashcards, placement sessions, kế hoạch hoặc recordings.
 
-Có 216 mục từ ở cấp nghĩa, 192 placement items (96 Reading và 96 Listening), 12 chủ đề và bốn mức CEFR A2/B1/B2/C1. Riêng lessons chứa 208 section texts khác nhau. Đây là số lượng bản ghi/học liệu của phiên bản này, không phải số lượng dạng bài độc lập hoặc số đề đã được hiệu chuẩn.
+## Dạng bài và cấu trúc
 
-Reading dùng 48 case studies có vấn đề, phương pháp, nhóm người, kết quả và giới hạn khác nhau. Khung câu hỏi nhất quán giúp kiểm tra trực tiếp detail, inference, contradiction, absence of evidence và author position. Listening dùng hội thoại có ngày/giá được sửa, thông tin được nhắc rồi phủ định, và phương pháp cũ được đối chiếu với phương pháp mới. Full Listening forms có social dialogue, public monologue, academic workshop discussion và lecture.
+- **Listening:** multiple choice một/nhiều đáp án, matching, map/plan/diagram labelling; form/note/table/flow-chart/summary completion; sentence completion; short answer. Đề mới có 4 Parts × 10 câu, 30 phút. Part 1 là hội thoại đời sống, Part 2 độc thoại xã hội, Part 3 trao đổi học thuật, Part 4 bài giảng. Mỗi lời thoại full-mock có 650–850 từ thực sự được nói, không tính tên người nói.
+- **Reading:** đủ 14 biến thể trong tài liệu. Bài luyện có khung bài tập hỗn hợp để luyện các kỹ năng; đề mới tổ chức câu hỏi thành các nhóm liên tiếp, 3 bài đọc, 40 câu, 60 phút. Academic và General Training đều có 2.150–2.750 từ/đề; phần cuối General dài hơn hai phần trước. Các đoạn đề mới được viết riêng và không lấy lại từ bài luyện.
+- **Writing:** Task 1 có line/bar/pie/table/map/process/mixed, cùng thư General; Task 2 có opinion/discussion/advantages-disadvantages/problems-solutions/causes-effects/two-part. Task 1 yêu cầu ít nhất 150 từ; Task 2 ít nhất 250 từ. Mỗi đề có hai tasks trong 60 phút; bộ chấm vẫn áp dụng trọng số Task 2 gấp đôi.
+- **Speaking:** mỗi bộ mới gồm 6 câu Part 1, cue card 4 ý Part 2, 6 câu Part 3; đề mô phỏng gồm cả ba phần. Các hướng luyện phát âm, short answer, follow-up và lập luận phục vụ practice. Điểm phát âm cần bằng chứng âm thanh; transcript riêng không đủ.
 
-Full mocks tái sử dụng các case facts của lesson sections, có source IDs trong tags/instructions. Reading mock passages bổ sung các background modules nguyên bản riêng theo 12 chủ đề, xen giữa các đoạn case để tạo workload dài hơn; context-source IDs chỉ rõ phần context được reuse giữa các forms. Các drills ngắn vẫn giữ nguyên. Academic forms dài 2.551–2.592 từ; GT forms dài 2.391–2.430 từ, có phần thông tin thực hành/community, workplace briefing và phần phân tích cuối dài hơn. Số từ này được audit trực tiếp, không phải mục tiêu chưa thực hiện. Các câu hỏi và keyed evidence vẫn bám vào case facts; background cung cấp bối cảnh đọc chứ không bổ sung sở thích hay dữ liệu riêng của participants. Các form Reading/Listening có 40 câu với cấu trúc lần lượt ba/bốn phần; Writing có đủ hai tasks; Speaking có đủ ba parts. Một full mock không đại diện cho một bộ passages hoàn toàn chưa từng xuất hiện trong thư viện.
+Biểu đồ lưu rows/series/unit. Map/plan/diagram lưu tọa độ, hình vùng, đường đi và nhãn; process lưu nodes/connections. Chỗ trống được tham chiếu bằng số câu thực. Không lưu SVG/HTML tùy ý hoặc giấu đáp án trong alt text của hình. Câu chọn nhiều có một nhóm lựa chọn chung nhưng một hàng đáp án cho mỗi số câu; kết quả vẫn tối đa 40 điểm thô ở đề receptive.
 
-Placement dùng các short-scenario template families với distractors và dữ liệu khác nhau, không phải 192 dạng câu hỏi độc lập. Difficulty được gán ban đầu bằng `(band - 5) × 1.2`; chưa có dữ liệu thử nghiệm để chứng minh hiệu chuẩn Rasch. CEFR và band của học liệu là chỉ định biên soạn, không phải ánh xạ IELTS–CEFR tuyệt đối.
+## Nguồn và giới hạn
 
-Vocabulary có nghĩa Việt, định nghĩa Anh, IPA, ít nhất hai collocations và hai ví dụ, word family, lỗi thường gặp, synonyms và register. Liên kết vocabulary của bài ưu tiên từ xuất hiện trong text, sau đó là từ cùng chủ đề/mức độ; không phải mọi target liên kết đều xuất hiện nguyên dạng trong passage.
+Học liệu cũ giữ `authored` / `authored-unreviewed`. Phần v3 dùng `ai` / `ai-unreviewed`, với provenance, mục tiêu học, nhóm lỗi và mức khó ước lượng. `structural-checks-passed` chỉ mô tả những kiểm tra cấu trúc được liệt kê; không có tuyên bố đã được giám khảo hoặc chuyên gia duyệt. Các kiểm tra máy không chứng minh độ khó đã hiệu chuẩn, mọi distractor đều tối ưu hoặc mọi cách diễn đạt đều hoàn hảo.
 
-Audit kiểm tra cấu trúc, ID, đáp án trong options, giới hạn từ, evidence spans, mâu thuẫn T/F/NG, cấu trúc mock, số từ workload Reading và provenance. Tất cả học liệu vẫn mang `source: authored`, `quality: authored-unreviewed`. Kiểm tra tự động không thay thế chuyên gia rà soát độ tự nhiên, độ khó, độ dài, distractors, hoặc hiệu chuẩn điểm thi.
+Các **đề cũ** vẫn có section-source/context-source để công bố việc ghép lại bài luyện và các đoạn bối cảnh. Chỉ phần mở rộng được yêu cầu dùng nguồn độc lập. Giữ lại những records này giúp lịch sử học tiếp tục hoạt động; không được đổi nhãn của đề cũ thành nguồn độc lập mới.
+
+Difficulty của placement ban đầu được gán `(band - 5) × 1.2`, chưa được hiệu chuẩn Rasch từ kết quả thí sinh. CEFR/band của bài học là chỉ định biên soạn và không phải ánh xạ tuyệt đối. Accent metadata mô tả hướng tạo audio, không chứng minh accent thực tế của giọng TTS trình duyệt.
+
+## Kiểm tra và cập nhật
+
+```bash
+npm run audit:content
+npm run audit:expansion
+npm run test
+npm run build
+npm run seed
+```
+
+Audit v3 kiểm tra đủ số lượng, ID/keys/options/limits, nguồn evidence, visual/blank references, các dạng bài, bố cục đề và chấm toàn bộ đáp án đúng. Nó so sánh section mới với cả cũ và mới, đồng thời phát hiện nguồn Reading/Listening có quá 55% trùng chuỗi 5 từ trên văn bản ngắn hơn. Đây là phép sàng lọc độ trùng văn bản; nó không chứng minh rằng không còn tương đồng ngữ nghĩa.
+
+Để lưu báo cáo máy đọc được: `npm run audit:expansion -- --report .local/reports/content-v3-audit.json`. Báo cáo gồm số lượng theo kỹ năng, độ phủ dạng bài, workload từng đề, các lỗi và giới hạn của phép kiểm tra. Chỉ seed/publish sau khi các kiểm tra đạt.

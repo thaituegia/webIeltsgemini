@@ -19,6 +19,7 @@
     "mongo:status": "node scripts/mongo.mjs status",
     "mongo:stop": "node scripts/mongo.mjs stop",
     "audit:content": "tsx scripts/audit-content.ts",
+    "audit:expansion": "tsx scripts/audit-expanded-content.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test"
   },

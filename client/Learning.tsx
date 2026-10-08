@@ -44,6 +44,7 @@ import type {
   LibraryResult,
   PlacementState,
   Question,
+  QuestionBlock,
   VocabularyEntry,
 } from "../shared/types";
 import { api, ApiError, json } from "./api";
@@ -67,6 +68,7 @@ import {
   submitSpeaking,
   type RecordingSession,
 } from "./audio";
+import { SectionVisuals } from "./ContentVisual";
 import "./learning.css";
 
 const icons = {
@@ -1290,9 +1292,19 @@ export function LearningPage() {
   const questions = content.questions.filter(
     (question) => question.sectionIndex === section,
   );
-  const answered = content.questions.filter(
-    (question) => !!responses[question.id]?.trim(),
-  ).length;
+  const answered = content.questions.filter((question) => {
+    const response = responses[question.id] || "";
+    return question.type === "choice-multiple"
+      ? parseSelections(response).length === (question.selectionGroup?.count || 1)
+      : !!response.trim();
+  }).length;
+  function updateResponse(questionIds: string[], value: string) {
+    setResponses((previous) => ({
+      ...previous,
+      ...Object.fromEntries(questionIds.map(questionId => [questionId, value])),
+    }));
+    changed();
+  }
   const locked = submitted || busy || remaining === 0;
   return (
     <div className="stack page-stack learning-page">
@@ -1505,26 +1517,15 @@ export function LearningPage() {
                 {questions.length} câu trong phần này
               </span>
             </div>
-            <div className="question-list">
-              {questions.map((question) => (
-                <QuestionInput
-                  key={question.id}
-                  question={question}
-                  value={responses[question.id] || ""}
-                  disabled={locked}
-                  onChange={(value) => {
-                    setResponses((previous) => ({
-                      ...previous,
-                      [question.id]: value,
-                    }));
-                    changed();
-                  }}
-                  feedback={attempt.feedback?.answers.find(
-                    (answer) => answer.questionId === question.id,
-                  )}
-                />
-              ))}
-            </div>
+            {activeSection && <SectionVisuals section={activeSection} />}
+            <ObjectiveQuestions
+              questions={questions}
+              blocks={activeSection?.questionBlocks || []}
+              responses={responses}
+              disabled={locked}
+              onChange={updateResponse}
+              feedback={attempt.feedback?.answers || []}
+            />
           </Card>
         </div>
       )}
@@ -1547,9 +1548,7 @@ export function LearningPage() {
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
-            {activeSection.chart?.length && (
-              <TaskChart section={activeSection} />
-            )}
+            <SectionVisuals section={activeSection} />
             <p className="prompt-instructions">{activeSection.instructions}</p>
             {content.sections.length > 1 && (
               <p className="muted tiny">
@@ -1823,6 +1822,88 @@ export function LearningPage() {
   );
 }
 
+function parseSelections(value: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) && parsed.every(item => typeof item === "string")
+      ? [...new Set(parsed)] : [];
+  } catch { return []; }
+}
+
+function ObjectiveQuestions({ questions, blocks, responses, disabled, onChange, feedback }: {
+  questions: Question[]; blocks: QuestionBlock[]; responses: Record<string, string>;
+  disabled: boolean; onChange: (ids: string[], value: string) => void;
+  feedback: Feedback["answers"];
+}) {
+  const blockNumbers = new Set(blocks.flatMap(block => block.questionNumbers));
+  const groups = new Set<string>();
+  const items: { number: number; element: React.ReactNode }[] = blocks.map(block => ({
+    number: Math.min(...block.questionNumbers),
+    element: <CompletionBlock key={block.id} block={block} questions={questions} responses={responses} disabled={disabled} onChange={onChange} feedback={feedback} />,
+  }));
+  for (const question of questions) {
+    if (blockNumbers.has(question.number)) continue;
+    if (question.type === "choice-multiple") {
+      const groupId = question.selectionGroup?.id || question.id;
+      if (groups.has(groupId)) continue;
+      groups.add(groupId);
+      const grouped = question.selectionGroup
+        ? questions.filter(item => item.type === "choice-multiple" && item.selectionGroup?.id === groupId)
+        : [question];
+      items.push({ number: question.number, element: <MultipleChoiceGroup key={groupId} questions={grouped} value={responses[question.id] || ""} disabled={disabled} onChange={value => onChange(grouped.map(item => item.id), value)} feedback={feedback.filter(answer => grouped.some(item => item.id === answer.questionId))} /> });
+    } else items.push({ number: question.number, element: <QuestionInput key={question.id} question={question} value={responses[question.id] || ""} disabled={disabled} onChange={value => onChange([question.id], value)} feedback={feedback.find(answer => answer.questionId === question.id)} /> });
+  }
+  return <div className="question-list">{items.sort((a, b) => a.number - b.number).map(item => item.element)}</div>;
+}
+function MultipleChoiceGroup({ questions, value, onChange, disabled, feedback }: {
+  questions: Question[]; value: string; onChange: (value: string) => void;
+  disabled: boolean; feedback: Feedback["answers"];
+}) {
+  const question = questions[0], count = question.selectionGroup?.count || 1;
+  const selected = parseSelections(value), complete = selected.length === count;
+  return <fieldset className={`practice-question multiple-choice-group ${feedback.length ? (feedback.every(answer => answer.correct) ? "correct" : "incorrect") : ""}`}>
+    <legend><span className="question-number">{questions.map(item => item.number).join("–")}</span>{question.prompt}</legend>
+    <p className="question-limit">{question.groupInstructions || `Choose ${count} answers.`} <span className={complete ? "selection-complete" : ""}>({selected.length}/{count})</span></p>
+    <div className="answer-options">{(question.options || []).map((option, index) => {
+      const checked = selected.includes(option);
+      return <label key={option} className={`answer-option ${checked ? "selected" : ""} ${!checked && complete ? "option-at-limit" : ""}`}>
+        <input type="checkbox" checked={checked} disabled={disabled || (!checked && complete)} onChange={() => {
+          const next = checked ? selected.filter(item => item !== option) : [...selected, option];
+          onChange(next.length ? JSON.stringify(next) : "");
+        }} />
+        <span className="option-letter">{String.fromCharCode(65 + index)}</span><span>{option}</span>
+      </label>;
+    })}</div>
+    {feedback.length > 0 && <div className="question-feedback"><strong>{feedback.filter(answer => answer.correct).length}/{questions.length} điểm</strong>{feedback.map(answer => <div key={answer.questionId}><p><b>Đáp án: {answer.answer}</b> · {answer.correct ? "Đã chọn đúng" : "Chưa chọn đúng"}</p><p>{answer.explanation}</p>{answer.evidence && <blockquote>{answer.evidence}</blockquote>}</div>)}</div>}
+  </fieldset>;
+}
+function CompletionBlock({ block, questions, responses, disabled, onChange, feedback }: {
+  block: QuestionBlock; questions: Question[]; responses: Record<string, string>;
+  disabled: boolean; onChange: (ids: string[], value: string) => void;
+  feedback: Feedback["answers"];
+}) {
+  const blockQuestions = questions.filter(question => block.questionNumbers.includes(question.number));
+  function filledText(text: string) {
+    return text.split(/(\{\{\d+\}\})/gu).map((part, index) => {
+      const match = /^\{\{(\d+)\}\}$/u.exec(part);
+      if (!match) return <span key={index}>{part}</span>;
+      const question = blockQuestions.find(item => item.number === Number(match[1]));
+      if (!question) return <span key={index}>{match[1]} ……</span>;
+      return <label key={index} className="completion-blank"><span className="blank-number">{question.number}</span><input aria-label={`Câu ${question.number}`} value={responses[question.id] || ""} disabled={disabled} onChange={event => onChange([question.id], event.target.value)} autoComplete="off" maxLength={500} placeholder="…………" /></label>;
+    });
+  }
+  return <section className={`completion-block completion-${block.type}`} aria-label={block.title}>
+    <div className="completion-block-heading"><span className="question-number">{block.questionNumbers.length === 1 ? block.questionNumbers[0] : `${Math.min(...block.questionNumbers)}–${Math.max(...block.questionNumbers)}`}</span><h3>{block.title}</h3></div>
+    <p className="question-limit">{block.instructions}</p>
+    {block.text && <div className="completion-prose">{filledText(block.text)}</div>}
+    {block.rows?.length && (block.type === "table" ? <div className="completion-table-scroll"><table><tbody>{block.rows.map((row, index) => <tr key={index}>{row.label && <th scope="row">{filledText(row.label)}</th>}{row.cells.map((cell, cellIndex) => <td key={cellIndex}>{filledText(cell)}</td>)}</tr>)}</tbody></table></div> : <div className={`completion-rows ${block.type === "flow-chart" ? "completion-flow" : ""}`}>{block.rows.map((row, index) => <div key={index} className="completion-row">{row.label && <strong>{filledText(row.label)}</strong>}<div>{row.cells.map((cell, cellIndex) => <span key={cellIndex}>{filledText(cell)}{cellIndex < row.cells.length - 1 ? " " : ""}</span>)}</div></div>)}</div>)}
+    {blockQuestions.flatMap(question => {
+      const answer = feedback.find(item => item.questionId === question.id);
+      return answer ? [<div key={question.id} className={`question-feedback ${answer.correct ? "completion-correct" : "completion-incorrect"}`}><strong>Câu {question.number}: {answer.correct ? "Chính xác" : `Đáp án: ${answer.answer}`}</strong><p>{answer.explanation}</p>{answer.evidence && <blockquote>{answer.evidence}</blockquote>}</div>] : [];
+    })}
+  </section>;
+}
+
 function QuestionInput({
   question,
   value,
@@ -1853,7 +1934,7 @@ function QuestionInput({
       {question.wordLimit && (
         <p className="question-limit">
           Không quá {question.wordLimit} từ
-          {question.type === "text" ? " và/hoặc một số" : ""}.
+          {question.allowNumbers ? " và/hoặc một số" : ""}.
         </p>
       )}
       {options?.length ? (
@@ -1904,103 +1985,6 @@ function QuestionInput({
         </div>
       )}
     </fieldset>
-  );
-}
-
-function TaskChart({ section }: { section: ContentSection }) {
-  const rows = section.chart || [];
-  const count = Math.max(...rows.map((row) => row.values.length), 1);
-  const max = Math.max(...rows.flatMap((row) => row.values), 1);
-  const colors = ["#527d6d", "#c5a675", "#7394b5", "#9c82b4"];
-  const chartWidth = 500;
-  const chartHeight = 230;
-  const left = 45;
-  const top = 20;
-  const plotHeight = 155;
-  const groupWidth = 410 / Math.max(rows.length, 1);
-  return (
-    <figure className="task-chart">
-      <svg
-        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-        role="img"
-        aria-label={`${section.title}. ${rows.map((row) => `${row.label}: ${row.values.join(", ")}`).join("; ")} ${section.chartUnit || ""}`}
-      >
-        <title>{section.title}</title>
-        {[0, 1, 2, 3, 4].map((step) => (
-          <g key={step}>
-            <line
-              x1={left}
-              x2={465}
-              y1={top + (plotHeight * step) / 4}
-              y2={top + (plotHeight * step) / 4}
-              stroke="#e4e9df"
-            />
-            <text
-              x={left - 8}
-              y={top + (plotHeight * step) / 4 + 4}
-              textAnchor="end"
-              fontSize={10}
-              fill="#819181"
-            >
-              {Math.round((max * (4 - step)) / 4)}
-            </text>
-          </g>
-        ))}
-        {rows.map((row, index) => (
-          <g key={row.label}>
-            {row.values.map((value, series) => (
-              <rect
-                key={series}
-                x={
-                  left +
-                  index * groupWidth +
-                  8 +
-                  (series * (groupWidth - 16)) / count
-                }
-                y={top + plotHeight * (1 - value / max)}
-                width={(groupWidth - 22) / count}
-                height={(plotHeight * value) / max}
-                fill={colors[series % colors.length]}
-                rx={2}
-              />
-            ))}
-            <text
-              x={left + index * groupWidth + groupWidth / 2}
-              y={top + plotHeight + 19}
-              textAnchor="middle"
-              fontSize={9}
-              fill="#667d68"
-            >
-              {row.label}
-            </text>
-          </g>
-        ))}
-        {(section.chartSeries || []).map((series, index) => (
-          <g key={series}>
-            <rect
-              x={left + index * 125}
-              y={210}
-              width={9}
-              height={9}
-              fill={colors[index % colors.length]}
-              rx={1}
-            />
-            <text
-              x={left + index * 125 + 14}
-              y={218}
-              fontSize={9}
-              fill="#667d68"
-            >
-              {series}
-            </text>
-          </g>
-        ))}
-      </svg>
-      <figcaption>
-        {section.chartUnit || "Số liệu theo đề bài"} · biểu đồ của bài luyện tự
-        biên soạn
-      </figcaption>
-    </figure>
   );
 }
 

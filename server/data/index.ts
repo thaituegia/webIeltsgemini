@@ -3,6 +3,7 @@ import {
   readingLessons,
   listeningLessons,
   receptiveMocks,
+  placementBank as legacyPlacementBank,
 } from "./receptive.js";
 import {
   writingLessons,
@@ -10,7 +11,14 @@ import {
   grammarLessons,
   productiveMocks,
 } from "./productive.js";
-import { vocabularyBank } from "./vocabulary.js";
+import { vocabularyBank as legacyVocabularyBank } from "./vocabulary.js";
+import { expandedReadingLessons, expandedReadingMocks } from "./expanded-reading.js";
+import { expandedListeningLessons, expandedListeningMocks } from "./expanded-listening.js";
+import { expandedWritingLessons, expandedWritingMocks, expandedSpeakingLessons, expandedSpeakingMocks } from "./expanded-productive.js";
+import { expandedGrammarLessons, expandedVocabularyBank, expandedPlacementBank } from "./expanded-support.js";
+
+export const vocabularyBank = [...legacyVocabularyBank, ...expandedVocabularyBank];
+export const placementBank = [...legacyPlacementBank, ...expandedPlacementBank];
 
 const cefrOrder = ["A2", "B1", "B2", "C1"];
 const rawBank = [
@@ -21,6 +29,15 @@ const rawBank = [
   ...grammarLessons,
   ...receptiveMocks,
   ...productiveMocks,
+  ...expandedReadingLessons,
+  ...expandedListeningLessons,
+  ...expandedWritingLessons,
+  ...expandedSpeakingLessons,
+  ...expandedGrammarLessons,
+  ...expandedReadingMocks,
+  ...expandedListeningMocks,
+  ...expandedWritingMocks,
+  ...expandedSpeakingMocks,
 ];
 export const contentBank: StoredContent[] = rawBank.map((content) => {
   const contentTopics = content.topic.split(" / ");
@@ -28,10 +45,12 @@ export const contentBank: StoredContent[] = rawBank.map((content) => {
     .map((section) => section.text)
     .join(" ")
     .toLowerCase();
-  const words = vocabularyBank
+  // Retain the existing lessons' vocabulary references and learner progress.
+  const availableWords = content.source === "authored" ? legacyVocabularyBank : vocabularyBank;
+  const words = availableWords
     .filter(
       (word) =>
-        contentTopics.includes(word.topic) &&
+        (contentTopics.includes(word.topic) || (content.source === "ai" && text.includes(word.word.toLowerCase()))) &&
         cefrOrder.indexOf(word.cefr) <= cefrOrder.indexOf(content.cefr),
     )
     .sort((left, right) => {
@@ -54,5 +73,3 @@ export const contentBank: StoredContent[] = rawBank.map((content) => {
       .map((word) => word.id),
   };
 });
-export { vocabularyBank } from "./vocabulary.js";
-export { placementBank } from "./receptive.js";

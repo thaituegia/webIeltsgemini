@@ -295,7 +295,9 @@ test("Writing Task 1 chart and both task drafts survive reload with truthful off
   await expect(
     page.getByText("Ít nhất 150 từ · khoảng 20 phút", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".task-chart").getByRole("img")).toBeVisible();
+  const chartTitle = content.sections[0]!.visuals?.[0]?.title || content.sections[0]!.title;
+  const chartName = new RegExp(chartTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  await expect(page.locator(".section-visuals").getByRole("img", { name: chartName })).toBeVisible();
   const task1 =
     "The chart compares changes in three categories. Overall the figures increased over time, although the scale of growth differed. The first category showed the largest rise, while the second category remained relatively stable. The final category increased steadily and ended above its initial value.";
   await page

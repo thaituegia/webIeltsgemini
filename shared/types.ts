@@ -8,7 +8,87 @@ export type QuestionType =
   | "true-false"
   | "yes-no"
   | "text"
-  | "matching";
+  | "matching"
+  | "choice-multiple";
+
+/** IELTS task labels are separate from the input widget and scoring rule. */
+export type IeltsQuestionType =
+  | "multiple-choice"
+  | "multiple-choice-multiple"
+  | "matching"
+  | "plan-labelling"
+  | "map-labelling"
+  | "diagram-labelling"
+  | "form-completion"
+  | "note-completion"
+  | "table-completion"
+  | "flow-chart-completion"
+  | "summary-completion"
+  | "sentence-completion"
+  | "short-answer"
+  | "matching-headings"
+  | "matching-information"
+  | "matching-features"
+  | "matching-sentence-endings"
+  | "true-false-not-given"
+  | "yes-no-not-given";
+
+export interface ChartVisual {
+  id: string;
+  type: "bar" | "line" | "pie" | "table";
+  title: string;
+  description?: string;
+  rows: { label: string; values: number[] }[];
+  series: string[];
+  unit: string;
+  xLabel?: string;
+  yLabel?: string;
+}
+export interface VisualLabel {
+  id: string;
+  x: number;
+  y: number;
+  /** A fixed landmark, or a blank question number, never both. */
+  text?: string;
+  questionNumber?: number;
+}
+export interface SpatialVisual {
+  id: string;
+  type: "map" | "plan" | "process" | "diagram";
+  title: string;
+  description?: string;
+  width: number;
+  height: number;
+  areas?: {
+    id: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fill?: string;
+  }[];
+  paths?: {
+    id: string;
+    points: [number, number][];
+    style?: "path" | "road" | "river";
+  }[];
+  labels: VisualLabel[];
+  nodes?: (VisualLabel & { width: number; height: number })[];
+  connections?: { from: string; to: string; label?: string }[];
+}
+/** Mixed tasks carry two or more typed assets; no raw SVG or HTML is stored. */
+export type VisualAsset = ChartVisual | SpatialVisual;
+
+export interface QuestionBlock {
+  id: string;
+  type: "form" | "note" | "table" | "flow-chart" | "summary" | "sentence";
+  title: string;
+  instructions: string;
+  questionNumbers: number[];
+  /** Numbered blanks use {{12}} and reference the actual question number. */
+  text?: string;
+  rows?: { label?: string; cells: string[] }[];
+}
 
 export interface Profile {
   id: string;
@@ -32,8 +112,16 @@ export interface Question {
   prompt: string;
   options?: string[];
   wordLimit?: number;
+  /** Allows at most one numeric token in addition to the stated word limit. */
+  allowNumbers?: boolean;
   sectionIndex: number;
   subskill: string;
+  questionType?: IeltsQuestionType;
+  /** Each group has count distinct numbered rows and one answer key per row. */
+  selectionGroup?: { id: string; count: number };
+  groupInstructions?: string;
+  visualId?: string;
+  blockId?: string;
 }
 export interface StoredQuestion extends Question {
   answer: string;
@@ -56,6 +144,9 @@ export interface ContentSection {
   chart?: { label: string; values: number[] }[];
   chartSeries?: string[];
   chartUnit?: string;
+  chartType?: "bar" | "line" | "pie" | "table";
+  visuals?: VisualAsset[];
+  questionBlocks?: QuestionBlock[];
   cuePoints?: string[];
 }
 export interface ContentItem {
@@ -76,6 +167,20 @@ export interface ContentItem {
   source: "authored" | "ai";
   quality: "authored-unreviewed" | "ai-unreviewed";
   createdAt: string;
+  estimatedDifficulty?: { band: number; cefr: Cefr; basis: string };
+  objectives?: string[];
+  errorTypes?: string[];
+  provenance?: {
+    method: "ai-assisted" | "authored" | "legacy";
+    version: string;
+    sourceDocument?: string;
+    generatedAt?: string;
+  };
+  review?: {
+    status: "structural-checks-passed" | "unreviewed";
+    checks: string[];
+    limitations: string[];
+  };
 }
 export interface StoredContent extends Omit<ContentItem, "questions"> {
   questions: StoredQuestion[];

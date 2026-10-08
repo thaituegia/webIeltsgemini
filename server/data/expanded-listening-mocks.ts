@@ -1,0 +1,22 @@
+import type { StoredContent } from "../../shared/types.js";
+import { buildListeningMock } from "./expanded-listening-mock-prose/build.js";
+export { buildListeningMock } from "./expanded-listening-mock-prose/build.js";
+import { mock01Draft } from "./expanded-listening-mock-prose/mock-01.js";
+import { mock02Draft } from "./expanded-listening-mock-prose/mock-02.js";
+import { mock03Draft } from "./expanded-listening-mock-prose/mock-03.js";
+import { mock04Draft } from "./expanded-listening-mock-prose/mock-04.js";
+import { mock05Draft } from "./expanded-listening-mock-prose/mock-05.js";
+import { mock06Draft } from "./expanded-listening-mock-prose/mock-06.js";
+import { mock07Draft } from "./expanded-listening-mock-prose/mock-07.js";
+import { mock08Draft } from "./expanded-listening-mock-prose/mock-08.js";
+import { mock09Draft } from "./expanded-listening-mock-prose/mock-09.js";
+import { mock10Draft } from "./expanded-listening-mock-prose/mock-10.js";
+import { mock11Draft } from "./expanded-listening-mock-prose/mock-11.js";
+import { mock12Draft } from "./expanded-listening-mock-prose/mock-12.js";
+import { mock13Draft } from "./expanded-listening-mock-prose/mock-13.js";
+import { mock14Draft } from "./expanded-listening-mock-prose/mock-14.js";
+import { mock15Draft } from "./expanded-listening-mock-prose/mock-15.js";
+import { mock16Draft } from "./expanded-listening-mock-prose/mock-16.js";
+
+const drafts = [mock01Draft, mock02Draft, mock03Draft, mock04Draft, mock05Draft, mock06Draft, mock07Draft, mock08Draft, mock09Draft, mock10Draft, mock11Draft, mock12Draft, mock13Draft, mock14Draft, mock15Draft, mock16Draft];
+export const expandedListeningMocks: StoredContent[] = drafts.map(buildListeningMock);

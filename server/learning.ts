@@ -15,6 +15,7 @@ import type {
   VocabularyCard,
 } from "../shared/types";
 import { ApiError } from "./errors";
+import { withinAnswerLimit } from "../shared/content-visuals";
 
 export function roundBand(value: number): number {
   return Math.round(value * 2) / 2;
@@ -96,22 +97,73 @@ export function gradeObjective(
       400,
       "Bài này cần phản hồi theo tiêu chí Viết hoặc Nói.",
     );
+  // A group is one shared selection with a separate numbered answer slot per key.
+  // Reject split responses so callers cannot submit every option across the rows.
+  const selections = new Map<string, string[] | null>();
+  for (const question of content.questions) {
+    if (
+      question.type !== "choice-multiple" ||
+      !question.selectionGroup ||
+      selections.has(question.selectionGroup.id)
+    ) continue;
+    const group = content.questions.filter((other) =>
+      other.type === "choice-multiple" &&
+      other.selectionGroup?.id === question.selectionGroup!.id,
+    );
+    let selected: string[] | null = null;
+    try {
+      const arrays = group.map((row) =>
+        JSON.parse(responses[row.id] ?? "[]") as unknown,
+      );
+      if (arrays.every((value) =>
+        Array.isArray(value) && value.every((option) => typeof option === "string"),
+      )) {
+        const value = arrays[0] as string[];
+        const canon = (items: string[]) =>
+          JSON.stringify([...items].map(normalized).sort());
+        const distinct = new Set(value.map(normalized));
+        if (
+          group.length === question.selectionGroup.count &&
+          question.selectionGroup.count >= 2 &&
+          question.selectionGroup.count <= 3 &&
+          new Set(group.map((row) => normalized(row.answer))).size === group.length &&
+          group.every((row) =>
+            row.selectionGroup?.count === question.selectionGroup!.count &&
+            row.sectionIndex === question.sectionIndex &&
+            JSON.stringify(row.options) === JSON.stringify(question.options),
+          ) &&
+          value.length <= question.selectionGroup.count &&
+          distinct.size === value.length &&
+          value.every((option) => question.options?.includes(option)) &&
+          arrays.every((items) => canon(items as string[]) === canon(value))
+        )
+          selected = value.map(normalized);
+      }
+    } catch {
+      // Invalid JSON receives no group credit.
+    }
+    selections.set(question.selectionGroup.id, selected);
+  }
   const answers = content.questions.map((question) => {
     const response = responses[question.id] ?? "";
     const accepted = [question.answer, ...(question.acceptedAnswers ?? [])].map(
       normalized,
     );
-    const withinLimit =
-      question.wordLimit === undefined ||
-      response.trim().split(/\s+/).filter(Boolean).length <= question.wordLimit;
+    const withinLimit = withinAnswerLimit(response, question.wordLimit, question.allowNumbers);
+    const selected = question.selectionGroup ? selections.get(question.selectionGroup.id) : null;
+    const validMultiple = question.type === "choice-multiple" && selected !== null && selected !== undefined;
     return {
       questionId: question.id,
       response,
       answer: question.answer,
-      correct: withinLimit && accepted.includes(normalized(response)),
-      explanation: withinLimit
-        ? question.explanation
-        : `Vượt quá giới hạn ${question.wordLimit} từ. ${question.explanation}`,
+      correct: question.type === "choice-multiple"
+        ? validMultiple && selected!.includes(normalized(question.answer))
+        : withinLimit && accepted.includes(normalized(response)),
+      explanation: question.type === "choice-multiple" && !validMultiple
+        ? `Nhóm lựa chọn không hợp lệ: chọn tối đa ${question.selectionGroup?.count ?? 0} phương án khác nhau và dùng cùng lựa chọn cho các số câu trong nhóm. ${question.explanation}`
+        : withinLimit
+          ? question.explanation
+          : `Vượt quá giới hạn ${question.wordLimit} từ${question.allowNumbers ? " và một số" : ""}. ${question.explanation}`,
       evidence: question.evidence,
       subskill: question.subskill,
     };

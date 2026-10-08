@@ -10,6 +10,7 @@ npm ci --include=dev --cache /workspace/.npm-cache --no-audit --no-fund
 if node --import dotenv/config --input-type=module -e 'const uri=process.env.MONGODB_URI;process.exit(!uri||/^mongodb:\/\/(?:127\.0\.0\.1|localhost):27017(?:\/|$)/.test(uri)?0:1)'; then
   npm run mongo:start
 fi
-npm run seed
 npm run audit:content
+npm run audit:expansion
 npm run build
+npm run seed

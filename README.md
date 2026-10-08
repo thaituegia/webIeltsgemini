@@ -42,20 +42,22 @@ MongoDB local dùng image chính thức ghim digest, chỉ mở cổng loopback 
 
 Các lần làm lại cùng form không tạo thêm bằng chứng độc lập để tăng điểm năng lực. Mỗi dữ liệu riêng đều truy vấn theo userId trong MongoDB; đây là cơ chế kiểm soát owner ở API, không gọi là PostgreSQL RLS. Session và drafts tồn tại qua khởi động lại API. Website dành cho một instance API và nhóm nhỏ; không tuyên bố đây là hệ thống thi có giám sát.
 
-## Ngân hàng học liệu ban đầu
+## Ngân hàng học liệu v3
 
 | Loại      | Lessons | Full mocks |
 | --------- | ------: | ---------: |
-| Reading   |      48 |          8 |
-| Listening |      48 |          8 |
-| Writing   |      24 |          4 |
-| Speaking  |      24 |          4 |
-| Grammar   |      16 |          0 |
-| **Tổng**  | **160** |     **24** |
+| Reading   |     144 |         24 |
+| Listening |     144 |         24 |
+| Writing   |      72 |         12 |
+| Speaking  |      72 |         12 |
+| Grammar   |      48 |          0 |
+| **Tổng**  | **480** |     **72** |
 
-Ngoài ra có **216 mục từ vựng**, **192 câu placement**, **12 chủ đề**, đủ A2/B1/B2/C1 và 208 section texts riêng trong lessons. Nội dung được biên soạn nguyên bản bằng các họ template có tình huống, phương pháp, kết quả và câu hỏi khác nhau. Một số full mocks ghép lại section từ bài luyện và có tag provenance; 24 mocks không có nghĩa là 24 ngân hàng hoàn toàn độc lập. Mức khó và phân loại từ là ước lượng hướng dẫn học, chưa hiệu chuẩn tâm trắc hay thẩm định bởi giám khảo IELTS.
+Ngân hàng có **648 mục từ vựng**, **576 câu placement**, đủ A2/B1/B2/C1. Bản mở rộng theo `Tong_hop_cac_dang_bai_IELTS.docx` giữ nguyên ID của 160 bài luyện và 24 đề cũ, thêm 320 bài luyện và 48 đề mới. Các bài đọc và lời thoại của đề mới được viết riêng, với đáp án và dẫn chứng trong nguồn. Các đề cũ có tái sử dụng section của bài luyện và tiếp tục giữ tag provenance; dữ liệu cũ không bị xóa để làm mất lịch sử học.
 
-`npm run audit:content` kiểm tra ID, đáp án, evidence, word limits và cấu trúc đầy đủ. Audit không thay thế thẩm định nội dung/chất lượng giáo dục. [Ghi chú ngân hàng](server/data/README.md) mô tả cụ thể nguồn tái sử dụng. Tính năng sinh thêm bài qua AI dùng schema validation và critic trước khi lưu, vẫn gắn trạng thái `ai-unreviewed`.
+Writing có đủ line/bar/pie/table/map/process/mixed charts, thư General Training và sáu nhóm luận Task 2. Giao diện dùng dữ liệu biểu đồ, tọa độ, đường đi và các bước quy trình thực; hỗ trợ phóng to trên điện thoại. Reading/Listening có bố cục form/note/table/flow-chart/summary/sentence completion và chọn nhiều đáp án, chấm từng vị trí trong tổng 40 câu. Speaking gồm ba parts, câu hỏi cá nhân, cue card bốn ý và thảo luận mở rộng.
+
+`npm run audit:content` kiểm tra ID, đáp án, evidence, word limits và cấu trúc đầy đủ. `npm run audit:expansion` kiểm tra tổng gấp ba, phủ các dạng bài, chấm toàn bộ đáp án, độ dài đề và trùng/độ tương đồng văn bản. [Ghi chú ngân hàng](server/data/README.md) mô tả nguồn và giới hạn kiểm tra. Bản mở rộng mang `source: ai`, `quality: ai-unreviewed`; band/difficulty là ước lượng, chưa hiệu chuẩn tâm trắc hoặc thẩm định bởi giám khảo IELTS. Sinh thêm bài qua API dùng schema validation và critic trước khi lưu.
 
 ## Điểm luyện tập và AI
 

@@ -249,3 +249,61 @@ test("repeated scored forms retain the first result as independent evidence", ()
   );
   assert.equal(dashboard.overallBand, null);
 });
+
+function multipleSelectionContent(): StoredContent {
+  const fixture = content(2);
+  fixture.questions = fixture.questions.map((question, index) => ({
+    ...question,
+    type: "choice-multiple",
+    questionType: "multiple-choice-multiple",
+    prompt: "Which TWO changes did the library introduce?",
+    options: ["A. longer opening hours", "B. paid entry", "C. quieter reading areas", "D. fewer books"],
+    answer: index === 0 ? "A. longer opening hours" : "C. quieter reading areas",
+    acceptedAnswers: undefined,
+    wordLimit: undefined,
+    selectionGroup: { id: "changes", count: 2 },
+  }));
+  return fixture;
+}
+test("multi-select preserves numbered IELTS slots and gives order-independent partial credit", () => {
+  const fixture = multipleSelectionContent();
+  const mark = (selected: string[]) => gradeObjective(fixture, Object.fromEntries(fixture.questions.map((question) => [question.id, JSON.stringify(selected)])));
+  assert.equal(mark(["C. quieter reading areas", "A. longer opening hours"]).rawScore, 2);
+  assert.equal(mark(["C. quieter reading areas"]).rawScore, 1);
+  const partial = mark(["A. longer opening hours", "D. fewer books"]);
+  assert.equal(partial.rawScore, 1);
+  assert.equal(partial.total, 2);
+  assert.deepEqual(partial.answers.map((answer) => answer.correct), [true, false]);
+  assert.equal(mark([]).rawScore, 0);
+  const fullMock = content(40, "full-mock");
+  fullMock.questions.splice(0, 2, ...fixture.questions);
+  const responses = Object.fromEntries(fullMock.questions.map((question) => [question.id, question.type === "choice-multiple" ? JSON.stringify(["C. quieter reading areas", "A. longer opening hours"]) : "Tuesday"]));
+  const fullFeedback = gradeObjective(fullMock, responses);
+  assert.equal(fullFeedback.rawScore, 40);
+  assert.equal(fullFeedback.total, 40);
+  assert.equal(fullFeedback.estimatedBand, 9);
+});
+test("malformed, duplicated, excessive or split multi-select submissions cannot gain credit", () => {
+  const fixture = multipleSelectionContent();
+  for (const value of ["not JSON", '"A. longer opening hours"', '[12]', '["A. longer opening hours","A. longer opening hours"]', '["A. longer opening hours","C. quieter reading areas","D. fewer books"]', '["A. longer opening hours","unknown"]']) {
+    const feedback = gradeObjective(fixture, { "q-0": value, "q-1": value });
+    assert.equal(feedback.rawScore, 0, value);
+    assert.match(feedback.answers[0].explanation, /không hợp lệ/);
+  }
+  assert.equal(gradeObjective(fixture, {
+    "q-0": '["A. longer opening hours","B. paid entry"]',
+    "q-1": '["C. quieter reading areas","D. fewer books"]',
+  }).rawScore, 0);
+  assert.equal(gradeObjective(fixture, { "q-0": '["A. longer opening hours"]' }).rawScore, 0);
+});
+test("WORDS AND/OR A NUMBER accepts one number only when explicitly requested", () => {
+  const fixture = content(1);
+  fixture.questions[0] = { ...fixture.questions[0], answer: "Room 12", acceptedAnswers: ["room 12"], allowNumbers: true };
+  assert.equal(gradeObjective(fixture, { "q-0": "ROOM 12" }).rawScore, 1);
+  fixture.questions[0].allowNumbers = false;
+  assert.equal(gradeObjective(fixture, { "q-0": "room 12" }).rawScore, 0);
+  fixture.questions[0].allowNumbers = true;
+  const excessive = gradeObjective(fixture, { "q-0": "room 12 13" });
+  assert.equal(excessive.rawScore, 0);
+  assert.match(excessive.answers[0].explanation, /giới hạn/);
+});

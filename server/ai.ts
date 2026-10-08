@@ -10,6 +10,13 @@ import type {
   TestType,
 } from "../shared/types";
 import { ApiError } from "./errors";
+import {
+  contentStructureIssues,
+  ieltsQuestionTypeSchema,
+  questionBlockSchema,
+  visualAssetSchema,
+  withinAnswerLimit,
+} from "../shared/content-visuals";
 
 const writingNames = [
   "Task Achievement/Response",
@@ -890,17 +897,26 @@ const generatedSectionSchema = z.object({
     .optional(),
   chartSeries: z.array(z.string().min(1).max(100)).max(12).optional(),
   chartUnit: z.string().max(100).optional(),
+  chartType: z.enum(["bar", "line", "pie", "table"]).optional(),
+  visuals: z.array(visualAssetSchema).max(6).optional(),
+  questionBlocks: z.array(questionBlockSchema).max(10).optional(),
   cuePoints: z.array(z.string().min(1).max(1000)).max(15).optional(),
 });
 const generatedQuestionSchema = z.object({
   id: z.string().min(1).max(100),
   number: z.number().int().min(1).max(100),
-  type: z.enum(["choice", "true-false", "yes-no", "text", "matching"]),
+  type: z.enum(["choice", "true-false", "yes-no", "text", "matching", "choice-multiple"]),
   prompt: z.string().min(1).max(2000),
   options: z.array(z.string().min(1).max(600)).min(2).max(15).optional(),
   wordLimit: z.number().int().min(1).max(5).optional(),
+  allowNumbers: z.boolean().optional(),
   sectionIndex: z.number().int().min(0).max(3),
   subskill: z.string().min(1).max(100),
+  questionType: ieltsQuestionTypeSchema.optional(),
+  selectionGroup: z.object({ id: z.string().min(1).max(100), count: z.number().int().min(2).max(3) }).strict().optional(),
+  groupInstructions: z.string().min(1).max(2000).optional(),
+  visualId: z.string().min(1).max(100).optional(),
+  blockId: z.string().min(1).max(100).optional(),
   answer: z.string().min(1).max(1000),
   acceptedAnswers: z.array(z.string().min(1).max(1000)).max(10).optional(),
   explanation: z.string().min(1).max(3000),
@@ -938,10 +954,10 @@ export async function generateContent(input: {
   const requestData = parsed.data;
   const formatRules: Record<ContentKind, string> = {
     reading:
-      "Generate one ORIGINAL 450–750-word reading passage and 10 diverse questions (MCQ, T/F/NG or Y/N/NG, matching, short text). format=lesson, durationMinutes=18. For General use practical/workplace informational text; Academic analytical informational text. Every question's evidence is a VERBATIM passage substring. NOT GIVEN must have an anchor quote and an explanation of the absent information; FALSE/NO needs explicit contradiction. At least three question types. Text questions have wordLimit 1–3 and acceptedAnswers.",
+      "Generate one ORIGINAL 450–750-word reading passage and 10 diverse numbered answer slots. format=lesson, durationMinutes=18. Include at least three IELTS types: MCQ, T/F/NG or Y/N/NG, matching headings/information/features/sentence endings, short answers, and authentic summary/note/table/flow-chart completion or diagram labelling where suitable. For General use practical/workplace informational text; Academic analytical informational text. Every question's evidence is a VERBATIM passage substring. NOT GIVEN must have an anchor quote and explanation of absent information; FALSE/NO needs explicit contradiction. Completion must be an actual blank in a questionBlock; a diagram needs its actual typed visual. Text wordLimit 1–3, optional allowNumbers for WORDS AND/OR A NUMBER, explicit acceptedAnswers.",
     listening:
-      "Generate a COMPLETE ORIGINAL Listening mock: format=full-mock, durationMinutes=30, exactly four sections, 10 questions each=40. Contexts: everyday conversation, social monologue, university discussion, academic lecture. Provide a substantial natural dialogue/script for every section, with distractors such as a corrected date or rejected option; mixed accents label intended voice metadata, never claim accent verification. Each section needs dialogue:[{speaker,accent:british|american|australian,text}]; section.text MUST include the full verbatim speech. 3 speakers across the mock. Questions use choice, matching, text; text wordLimit1–3. Every evidence quote is a VERBATIM substring of section.text. Don't shorten or duplicate scripts just to fill a count.",
-    writing: `Generate a COMPLETE ORIGINAL Writing mock: format=full-mock,durationMinutes=60, two sections, NO questions. First section task=1: ${requestData.testType === "academic" ? "original bar/line/table data, nonempty chart [{label,values}], matching chartSeries and chartUnit, clear objective comparison prompt requiring an overview" : "a practical letter with clear recipient, purpose, intended tone, and exactly three cuePoints"}. Second section task=2: original discussion/opinion/problem-solution essay prompt, 250 words minimum. Task1 150 words minimum. No sample model answer. Section.text contains actual prompt, instructions describes time/minimum words. Include all data/assets needed to answer.`,
+      "Generate a COMPLETE ORIGINAL Listening mock: format=full-mock, durationMinutes=30, exactly four sections, 10 numbered answer slots each=40. Contexts: everyday conversation, social monologue, university discussion, academic lecture. Provide substantial natural dialogue/script in every section, with realistic self-corrections and rejected choices; mixed accents are intended voice metadata, never verified accents. Each section needs dialogue:[{speaker,accent:british|american|australian,text}]; section.text MUST contain all speech verbatim. At least three speakers and three accents overall. Include natural form/note/table completion, MCQ/matching, one map or plan labelling group in Part2 with audible coherent directions, and an academic completion group in Part4. A visual blank must not show the target name anywhere in caption, fixed labels or description. Text wordLimit1–3, optional allowNumbers and explicit acceptedAnswers. Multi-select allowed with shared selectionGroup 2–3 separately numbered answer rows. Evidence is a VERBATIM section.text substring. Never pad by repeating scripts.",
+    writing: `Generate a COMPLETE ORIGINAL Writing mock: format=full-mock,durationMinutes=60, two sections, NO objective questions. First section task=1: ${requestData.testType === "academic" ? "choose one natural bar/line/pie/table/process/map or mixed visual task; provide nonempty typed visuals with realistic internally consistent data. Chart assets need rows/series/unit; pie has one series, nonnegative proportions and percent total100. Process needs labelled coordinate nodes and coherent connections. Map comparisons need before/after plan assets, clear fixed landmarks, and realistic changes. Mixed tasks use two complementary assets, not arbitrary decoration. Legacy chart [{label,values}]/chartSeries/chartUnit accepted if chartType accurately matches the requested diagram. Prompt requires an objective overview, not opinion" : "a practical letter with clear recipient, purpose, intended tone, and exactly three cuePoints"}. Second section task=2: original discussion/opinion/problem-solution essay prompt, 250 words minimum. Task1 150 words minimum. No sample answer, overview hints or scored feedback. Section.text is the actual prompt; instructions state time/minimum words. Include all necessary assets.`,
     speaking:
       "Generate COMPLETE ORIGINAL Speaking: format=full-mock,durationMinutes=12, exactly three sections, NO questions. Part1 section.text contains six varied personal questions; Part2 one cue card with four cuePoints and instructions for 1min preparation/2min speaking; Part3 section.text contains six abstract analytical follow-up questions linked to Part2 but not repeating personal questions. Content in English, learning description in Vietnamese. No sample answers.",
     grammar:
@@ -949,7 +965,7 @@ export async function generateContent(input: {
   };
   const draft = await structured(
     "CONTENT_MODEL",
-    `You author original IELTS practice material, not copied official/Cambridge material. Target the requested band with transparent estimated difficulty, never calibrated/examiner-reviewed. ${formatRules[requestData.skill]} Return JSON {title,description,cefr:A2|B1|B2|C1,durationMinutes,format:lesson|full-mock,sections:[{id,title,text,dialogue?,task?:1|2,instructions?,chart?,chartSeries?,chartUnit?,cuePoints?}],questions:[{id,number,type:choice|true-false|yes-no|text|matching,prompt,options?,wordLimit?,sectionIndex:zeroBased,subskill,answer,acceptedAnswers?,explanation,evidence}],tags:[strings]}. All IDs unique, question numbering contiguous. choice/matching answers must equal one option exactly. true-false answers TRUE/FALSE/NOT GIVEN; yes-no YES/NO/NOT GIVEN. Narrative/script and prompts in English, descriptions/explanations in Vietnamese. Original data and coherent realistic facts; never invent scientific citations as fact. CEFR is only a rough pedagogical reference.`,
+    `You author original IELTS practice material, not copied official/Cambridge material. Target the requested band with transparent estimated difficulty, never calibrated/examiner-reviewed. Public descriptions and instructions must not include answer hints or model answers. ${formatRules[requestData.skill]} Return JSON {title,description,cefr:A2|B1|B2|C1,durationMinutes,format:lesson|full-mock,sections:[{id,title,text,dialogue?,task?:1|2,instructions?,chart?,chartType?:bar|line|pie|table,chartSeries?,chartUnit?,visuals?,questionBlocks?,cuePoints?}],questions:[{id,number,type:choice|true-false|yes-no|text|matching|choice-multiple,questionType?,prompt,options?,wordLimit?,allowNumbers?,sectionIndex:zeroBased,subskill,selectionGroup?:{id,count:2|3},groupInstructions?,visualId?,blockId?,answer,acceptedAnswers?,explanation,evidence}],tags:[strings]}. All IDs unique and question numbers contiguous. choice/matching answers equal exactly one option. A choice-multiple group contains count consecutive rows with identical prompt/options/groupInstructions, each row key a different correct option; shared selected array will be marked per answer slot in any order. T/F/NG keys TRUE/FALSE/NOT GIVEN; Y/N/NG keys YES/NO/NOT GIVEN. questionType uses an IELTS name: multiple-choice,multiple-choice-multiple,matching,plan-labelling,map-labelling,diagram-labelling,form-completion,note-completion,table-completion,flow-chart-completion,summary-completion,sentence-completion,short-answer,matching-headings,matching-information,matching-features,matching-sentence-endings,true-false-not-given,yes-no-not-given. A questionBlock is {id,type:form|note|table|flow-chart|summary|sentence,title,instructions,questionNumbers:[numbers],text?,rows?:[{label?,cells:[strings]}]}; text/cells use {{12}} for question12, each blank exactly once and question.blockId matches. Visual charts are {id,type:bar|line|pie|table,title,description?,rows:[{label,values:[numbers]}],series:[strings],unit,xLabel?,yLabel?}. Spatial visuals {id,type:map|plan|process|diagram,title,description?,width,height,labels:[{id,x,y,text? OR questionNumber?}],areas?:[{id,x,y,width,height,fill?:hexColour}],paths?:[{id,points:[[x,y]],style?:path|road|river}],nodes?:[{id,x,y,width,height,text? OR questionNumber?}],connections?:[{from:nodeId,to:nodeId,label?}]}. Canvas dimensions64–2000; coordinates/rectangles inside canvas. Blank labels carry only questionNumber, never a text/answer, and corresponding question.visualId must match. No rawSVG/HTML/URL or hidden answer fields in assets. Multiple assets represent mixed charts or before/after maps. Narrative/scripts/prompts English, descriptions/explanations Vietnamese. Coherent original facts; never invent research citations as factual sources. CEFR is a rough teaching reference.`,
     requestData,
     generatedSchema,
   );
@@ -960,10 +976,8 @@ export async function generateContent(input: {
       draft.questions.length
   )
     throw new ApiError(502, "Học liệu AI có ID trùng; chưa lưu vào ngân hàng.");
-  if (
-    new Set(draft.questions.map((question) => normalizedLabel(question.prompt)))
-      .size !== draft.questions.length
-  )
+  const duplicatePrompts = draft.questions.filter((question, index) => draft.questions.some((other, otherIndex) => otherIndex < index && normalizedLabel(other.prompt) === normalizedLabel(question.prompt) && (!question.selectionGroup || question.selectionGroup.id !== other.selectionGroup?.id)));
+  if (duplicatePrompts.length)
     throw new ApiError(
       502,
       "Học liệu AI có câu hỏi trùng; chưa lưu vào ngân hàng.",
@@ -986,7 +1000,7 @@ export async function generateContent(input: {
         "Học liệu AI có lựa chọn trùng hoặc không phân biệt được.",
       );
     if (
-      (question.type === "choice" || question.type === "matching") &&
+      (question.type === "choice" || question.type === "matching" || question.type === "choice-multiple") &&
       question.options?.filter((option) => option === question.answer)
         .length !== 1
     )
@@ -1007,9 +1021,9 @@ export async function generateContent(input: {
     if (
       question.type === "text" &&
       (!question.wordLimit ||
-        words(question.answer) > question.wordLimit ||
+        !withinAnswerLimit(question.answer, question.wordLimit, question.allowNumbers) ||
         question.acceptedAnswers?.some(
-          (answer) => words(answer) > (question.wordLimit ?? 0),
+          (answer) => !withinAnswerLimit(answer, question.wordLimit, question.allowNumbers),
         ))
     )
       throw new ApiError(502, "Đáp án AI vi phạm giới hạn số từ.");
@@ -1047,7 +1061,8 @@ export async function generateContent(input: {
       !draft.sections.some((section) => section.task === 2) ||
       draft.questions.length ||
       (requestData.testType === "academic" &&
-        !draft.sections.find((section) => section.task === 1)?.chart?.length) ||
+        !draft.sections.find((section) => section.task === 1)?.chart?.length &&
+        !draft.sections.find((section) => section.task === 1)?.visuals?.length) ||
       (requestData.testType === "general" &&
         draft.sections.find((section) => section.task === 1)?.cuePoints
           ?.length !== 3))
@@ -1110,9 +1125,12 @@ export async function generateContent(input: {
       for (const line of section.dialogue ?? [])
         ensureQuote(section.text, line.text);
   }
+  const structureIssues = contentStructureIssues({ ...draft, skill: requestData.skill });
+  if (structureIssues.length)
+    throw new ApiError(502, `Học liệu AI sai cấu trúc; chưa lưu. ${structureIssues.slice(0, 3).join(" ")}`);
   const critic = await structured(
     "EXTRACTOR_MODEL",
-    "Independently critique this generated IELTS practice content. Return JSON {approved:boolean,issues:[string],difficultyReason:string}. Reject ambiguous/unanswerable or wrong answer keys, mismatched evidence, misleading NOT GIVEN, duplicate questions/passage content, unrealistically trivial difficulty, missing writing chart series/units/data, weak dialogue distractors, incomplete Speaking six Part1/six analytical Part3 questions, and full-mock structures that are incomplete. Verify each answer against its section and every task's assets. Difficulty is only an estimate. Approve only if defensibly answerable and original within this submitted material; cannot claim corpus originality or examiner review.",
+    "Independently critique this generated IELTS practice content. Return JSON {approved:boolean,issues:[string],difficultyReason:string}. Reject ambiguous/unanswerable or wrong answer keys, mismatched evidence, misleading NOT GIVEN, duplicated questions/passages (identical prompt permitted only for consecutive slots of one valid shared multi-select group), trivial difficulty, weak dialogue distractors, incomplete Speaking six Part1/six analytical Part3, and incomplete mocks. Verify ALL multi-select correct options against evidence; each keyed answer is one raw-score slot. Verify map directions physically reach the blank, missing diagram terms follow the passage, and no answer hints leak through public descriptions/instructions or blank names through caption/fixed labels/description. Verify completion blocks are natural forms/notes/summaries with meaningful surrounding content, not short-answer questions cosmetically renamed. Writing charts need coherent time/category comparisons, correct units/proportions, distinct lines/bars; mapbefore/after changes and process flow must be possible and visible. Reject assets that omit information needed to answer or invent an external citation. Target-band difficulty remains an estimate. Approve only when answerable and original within this submitted material; cannot certify corpus originality or examiner review.",
     { request: requestData, content: draft },
     z.object({
       approved: z.boolean(),
@@ -1153,6 +1171,9 @@ export async function generateContent(input: {
     tags: [...draft.tags, "difficulty-estimated", "automated-critic-passed"],
     source: "ai",
     quality: "ai-unreviewed",
+    estimatedDifficulty: { band: requestData.band, cefr: draft.cefr, basis: "Mức độ do AI đề xuất và kiểm tra tự động; chưa hiệu chuẩn bằng dữ liệu thi hoặc kiểm định bởi chuyên gia." },
+    provenance: { method: "ai-assisted", version: "ielts-visual-generation-v3", generatedAt: new Date().toISOString() },
+    review: { status: "structural-checks-passed", checks: ["typed-assets", "answer-slots", "verbatim-evidence", "automated-ai-critic"], limitations: ["Độ khó chưa được hiệu chuẩn từ dữ liệu thi.", "Chưa được chuyên gia hoặc giám khảo kiểm định."] },
     createdAt: new Date().toISOString(),
   };
 }

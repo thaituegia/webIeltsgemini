@@ -21,6 +21,14 @@ if [[ -e "$domain_override" || -L "$domain_override" ]]; then
   fi
   compose_arguments+=(-f "$domain_override")
 fi
+release_override="$root_dir/.local/deploy/release.compose.yaml"
+if [[ -e "$release_override" || -L "$release_override" ]]; then
+  if [[ ! -f "$release_override" || -L "$release_override" ]]; then
+    printf '%s\n' 'Refusing a redirected or invalid release override.' >&2
+    exit 1
+  fi
+  compose_arguments+=(-f "$release_override")
+fi
 case "${1:-}" in
   validate)
     shift

@@ -5,6 +5,7 @@ import {
   placementBank,
 } from "../server/data/index.js";
 import type { ContentKind } from "../shared/types.js";
+import { validateContentStructure, withinAnswerLimit } from "../shared/content-visuals.js";
 
 const unique = (values: string[], label: string) =>
   assert.equal(
@@ -37,10 +38,11 @@ const types = new Set<string>();
 const levels = new Set<string>();
 const topics = new Set<string>();
 for (const item of contentBank) {
-  assert.equal(item.source, "authored", `${item.id}: unexpected source`);
+  const expanded = item.provenance?.version?.includes("v3") === true;
+  assert.equal(item.source, expanded ? "ai" : "authored", `${item.id}: unexpected source`);
   assert.equal(
     item.quality,
-    "authored-unreviewed",
+    expanded ? "ai-unreviewed" : "authored-unreviewed",
     `${item.id}: unsupported quality claim`,
   );
   assert.ok(
@@ -48,6 +50,7 @@ for (const item of contentBank) {
     `${item.id}: missing metadata`,
   );
   assert.ok(item.sections.length, `${item.id}: missing sections`);
+  validateContentStructure(item);
   assert.ok(
     item.band >= 3 && item.band <= 8,
     `${item.id}: band out of authored range`,
@@ -88,7 +91,7 @@ for (const item of contentBank) {
       );
   }
   unique(
-    item.questions.map((q) => q.prompt),
+    item.questions.filter((q, index, all) => !q.selectionGroup || all.findIndex((candidate) => candidate.selectionGroup?.id === q.selectionGroup?.id) === index).map((q) => q.prompt),
     `${item.id} question wording`,
   );
   for (const [index, q] of item.questions.entries()) {
@@ -104,7 +107,7 @@ for (const item of contentBank) {
       q.answer && q.explanation && q.evidence && q.subskill,
       `${q.id}: missing answer metadata`,
     );
-    if (["choice", "matching", "true-false", "yes-no"].includes(q.type)) {
+    if (["choice", "choice-multiple", "matching", "true-false", "yes-no"].includes(q.type)) {
       assert.ok(q.options && q.options.length >= 2, `${q.id}: missing options`);
       unique(q.options!, `${q.id} options`);
       assert.equal(
@@ -115,7 +118,7 @@ for (const item of contentBank) {
     }
     if (q.wordLimit)
       assert.ok(
-        q.answer.trim().split(/\s+/).length <= q.wordLimit,
+        withinAnswerLimit(q.answer, q.wordLimit, q.allowNumbers),
         `${q.id}: answer exceeds word limit`,
       );
     if (item.skill === "reading" || item.skill === "listening") {
@@ -125,17 +128,19 @@ for (const item of contentBank) {
           text.includes(q.evidence),
           `${q.id}: evidence is not a passage/transcript span`,
         );
-      if (q.answer === "NOT GIVEN")
+      if (!expanded && q.answer === "NOT GIVEN")
         assert.ok(
           /no information|gives no|not.*provided/i.test(q.evidence),
           `${q.id}: no rationale for absent evidence`,
         );
-      if (q.type === "true-false" && q.answer === "FALSE")
+      if (expanded && q.answer === "NOT GIVEN")
+        assert.ok(q.explanation.length >= 40, `${q.id}: missing explanation for absent information`);
+      if (!expanded && q.type === "true-false" && q.answer === "FALSE")
         assert.ok(
           /did not require|Only \d+%/.test(q.evidence),
           `${q.id}: FALSE lacks explicit contradiction`,
         );
-      if (q.type === "yes-no" && q.answer === "NO")
+      if (!expanded && q.type === "yes-no" && q.answer === "NO")
         assert.ok(
           /too early|do not establish/.test(q.evidence),
           `${q.id}: NO lacks author contradiction`,
@@ -180,12 +185,12 @@ for (const item of contentBank) {
             words[2]! > words[0]! && words[2]! > words[1]!,
             `${item.id}: GT final passage must be longer`,
           );
-        assert.ok(
+        if (!expanded) assert.ok(
           item.tags.some((tag) => tag.startsWith("context-source:")),
           `${item.id}: added background provenance missing`,
         );
       }
-      assert.ok(
+      if (!expanded) assert.ok(
         item.tags.some((tag) => tag.startsWith("section-source:")),
         `${item.id}: reusable sections need provenance`,
       );
@@ -211,7 +216,7 @@ for (const item of contentBank) {
     }
   }
 }
-assert.equal(topics.size, 12, "lesson topics");
+assert.ok(topics.size >= 12, "lesson topics");
 assert.equal(levels.size, 4, "CEFR coverage");
 assert.ok(types.size >= 5, "question type coverage");
 assert.ok(vocabularyBank.length >= 200, "vocabulary count");
@@ -282,7 +287,7 @@ console.log(
   JSON.stringify(
     {
       status: "passed",
-      quality: "authored-unreviewed",
+      quality: "Original bank: authored-unreviewed; expansion: ai-unreviewed",
       lessons: contentBank.filter((x) => x.format === "lesson").length,
       mocks: contentBank.filter((x) => x.format === "full-mock").length,
       bySkill,
@@ -308,7 +313,7 @@ console.log(
         })),
       distinctLessonSectionTexts: originalSectionTexts.size,
       notice:
-        "Checks validate structure, keyed answers and evidence spans. They do not establish psychometric calibration or expert review. Mocks disclose reused lesson sections.",
+        "Checks validate structure, keyed answers and evidence spans. They do not establish psychometric calibration or expert review. Legacy mocks disclose reused lesson sections; new v3 mocks use independent source material.",
     },
     null,
     2,

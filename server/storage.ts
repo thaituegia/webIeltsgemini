@@ -17,6 +17,7 @@ import type {
   Feedback,
 } from "../shared/types";
 import { contentBank, placementBank, vocabularyBank } from "./data/index";
+import { validateContentStructure } from "../shared/content-visuals";
 
 export interface UserRecord extends Profile {
   _id: string;
@@ -156,6 +157,8 @@ export async function connectDatabase(
 
 export async function seedDatabase(database: Database): Promise<void> {
   // Shared seed is idempotent and never touches private progress.
+  // Validate the complete bank before writing the first public document.
+  for (const content of contentBank) validateContentStructure(content);
   if (contentBank.length)
     await database.content.bulkWrite(
       contentBank.map((item) => ({
@@ -165,7 +168,7 @@ export async function seedDatabase(database: Database): Promise<void> {
           upsert: true,
         },
       })),
-      { ordered: false },
+      { ordered: false, ignoreUndefined: true },
     );
   if (vocabularyBank.length)
     await database.vocabulary.bulkWrite(
@@ -176,7 +179,7 @@ export async function seedDatabase(database: Database): Promise<void> {
           upsert: true,
         },
       })),
-      { ordered: false },
+      { ordered: false, ignoreUndefined: true },
     );
   if (placementBank.length)
     await database.placementItems.bulkWrite(
@@ -187,7 +190,7 @@ export async function seedDatabase(database: Database): Promise<void> {
           upsert: true,
         },
       })),
-      { ordered: false },
+      { ordered: false, ignoreUndefined: true },
     );
 }
 

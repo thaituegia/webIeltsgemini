@@ -77,6 +77,19 @@ Khi kiểm tra từ máy bên ngoài, chép riêng `site.crt` đã xác minh fin
 
 ## Vận hành và dừng riêng website
 
+### Cập nhật ngân hàng nội dung v3 trên website đã có domain
+
+Với triển khai hiện tại tại `https://sutonghanyu.vn`, dùng `deploy/update.sh` thay vì chạy lại bootstrap. Script nhận thư mục live, commit Git đầy đủ và SHA256 của archive tương ứng:
+
+```bash
+bash deploy/update.sh LIVE_DIR SOURCE_COMMIT ARCHIVE_SHA256 --check
+bash deploy/update.sh LIVE_DIR SOURCE_COMMIT ARCHIVE_SHA256
+```
+
+`--check` chỉ kiểm tra hiện trạng. Lượt cập nhật tải đúng commit, kiểm checksum, build khi app cũ vẫn chạy với giới hạn 1024 MiB RAM và 0,5 CPU, rồi chỉ tạo lại service `app`. MongoDB, proxy, host Nginx, chứng chỉ và các project khác được đối chiếu với baseline. Ngân hàng đạt 480 bài luyện, 72 đề mô phỏng, 648 mục từ vựng và 576 câu placement; các ID cũ cùng học liệu tự tạo ngoài seed được giữ lại. Tài khoản, tiến độ, flashcard và ghi âm không nằm trong phạm vi seed.
+
+Script giữ image/source cũ để khôi phục. Khi có lỗi, chỉ tự loại bỏ học liệu mới nếu dữ liệu cũ không đổi, bản ghi mới khớp manifest và chưa có dữ liệu học tập tham chiếu tới chúng. Nếu điều kiện này không đạt, script giữ dữ liệu và bản mới, báo log riêng để xử lý. `release.compose.yaml` lưu image và đường dẫn source riêng cho các lần vận hành tiếp theo. Script này dành cho đúng triển khai đã kiểm tra, không phải trình cài đặt cho VPS bất kỳ.
+
 ```bash
 bash deploy/compose.sh logs --tail 100 app proxy
 bash deploy/compose.sh ps
