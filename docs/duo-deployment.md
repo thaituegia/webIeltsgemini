@@ -34,6 +34,6 @@ Payload Mongo lớn đi qua tệp tạm riêng trong container Mongo, kiểm tra
 
 Nếu app mới chưa được khởi động, script chỉ khôi phục app/config cũ sau khi kiểm tra image cũ vẫn đúng digest. Nếu app mới đã bắt đầu chạy, script **không rollback database, xóa học liệu hoặc xóa/khôi phục users**. Bản mới và mọi dữ liệu được giữ để xử lý bằng audit riêng. Các tệp audit có dữ liệu cá nhân; chỉ gửi các log lỗi cụ thể, không công khai cả thư mục hoặc tệp credentials.
 
-Thành công yêu cầu HTTPS tin cậy, MongoDB/phone auth, file JavaScript, dữ liệu và baseline các container khác, listener cũ, file cấu hình, PID host Nginx đều đạt. Việc chạy script trên server không tự chứng minh truy cập Internet từ thiết bị ngoài.
+Thành công yêu cầu HTTPS tin cậy, MongoDB/phone auth, file JavaScript, dữ liệu và baseline các container khác, listener cũ, file cấu hình, PID host Nginx đều đạt. Bộ kiểm tra tài nguyên cũng đọc CSS đã build và WebP/SVG/WOFF2 từ `/app/dist` của app mới, đối chiếu ảnh/font với nguồn đã ghim rồi tải qua gateway HTTPS để xác minh MIME, dung lượng và SHA256. Phản hồi HTML200 thay cho ảnh/font, CSS cũ hoặc file khác nguồn đều bị từ chối. Giới hạn 128 tài nguyên, 16 MiB mỗi file và 32 MiB tổng. Việc chạy script trên server không tự chứng minh truy cập Internet từ thiết bị ngoài.
 
 Kiểm thử gồm Bash/Python syntax, private input/env quoting bằng Compose thật, scope Compose, trường hợp dữ liệu thay đổi và chạy verifier với cả ngân hàng trên MongoDB test riêng. Kiểm thử không triển khai trên VPS hoặc thay đổi project đang phục vụ người dùng.

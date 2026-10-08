@@ -25,6 +25,8 @@ import {
   ShieldCheck,
   Headphones,
   Check,
+  Flame,
+  Trees,
 } from "lucide-react";
 import type { Health, Profile } from "../shared/types";
 import { api, json } from "./api";
@@ -139,7 +141,7 @@ export default function App() {
           <Link to="/dashboard" className="brand-link">
             <Logo />
           </Link>
-          <p className="sidebar-caption">MỖI NGÀY MỘT BƯỚC TIẾN</p>
+          <p className="sidebar-caption">BÀN ĐIỀU HÀNH CHIẾN DỊCH</p>
           <nav aria-label="Điều hướng chính">
             {links.map(([path, label, Icon]) => (
               <NavLink
@@ -187,6 +189,9 @@ export default function App() {
               Không gian học của hai người
             </span>
             <div className="topbar-right">
+              <span className="element-pair" aria-label="Phong cách Hỏa và Mộc">
+                <Flame size={14} /> Hỏa <span>·</span> <Trees size={14} /> Mộc
+              </span>
               <span>
                 {user.testType === "academic"
                   ? "IELTS Academic"
@@ -243,11 +248,12 @@ function Logo() {
   return (
     <span className="brand">
       <span className="brand-mark">
-        <Compass size={24} strokeWidth={1.8} />
+        <Flame size={23} strokeWidth={2} />
+        <Trees size={16} strokeWidth={2} />
       </span>
       <span>
         IELTS<span className="brand-ai"> AI</span>
-        <small>YOUR NEXT CHAPTER</small>
+        <small>ĐỒNG HÀNH CHINH PHỤC</small>
       </span>
     </span>
   );
@@ -648,66 +654,13 @@ function LegacyAuthPage({
 }
 export function LearningIllustration() {
   return (
-    <svg
-      className="learning-illustration"
-      viewBox="0 0 440 230"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M40 174C87 74 145 210 215 111S342 41 397 124"
-        stroke="currentColor"
-        strokeOpacity=".24"
-        strokeWidth="2"
-        strokeDasharray="5 7"
-      />
-      <circle cx="80" cy="120" r="37" fill="#bde2d4" />
-      <path d="M61 113L80 103L100 113L80 123L61 113Z" fill="#087d72" />
-      <path
-        d="M66 119V132C76 138 85 138 94 132V119"
-        stroke="#087d72"
-        strokeWidth="3"
-      />
-      <rect
-        x="153"
-        y="116"
-        width="128"
-        height="87"
-        rx="12"
-        fill="#f3e7d1"
-        transform="rotate(-8 153 116)"
-      />
-      <path
-        d="M169 130C186 124 200 126 217 133V183C200 176 187 176 169 181V130Z"
-        fill="#fffdf8"
-      />
-      <path
-        d="M217 133C233 123 247 121 265 125V176C248 173 234 176 217 183V133Z"
-        fill="#fffdf8"
-      />
-      <path d="M217 133V183" stroke="#c5baa6" strokeWidth="2" />
-      <path
-        d="M179 139L202 140M179 151L202 151M179 164L202 163M232 137L255 133M232 149L255 145M232 162L255 158"
-        stroke="#bcc3ba"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <circle cx="340" cy="88" r="43" fill="#eec6ad" />
-      <path
-        d="M322 82L334 95L361 65"
-        stroke="#895d40"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="120" cy="199" r="5" fill="#eec6ad" />
-      <circle cx="291" cy="37" r="5" fill="#bde2d4" />
-      <path
-        d="M111 50V63M104 57H118M381 174V187M374 181H388"
-        stroke="#eec6ad"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-    </svg>
+    <img
+      className="learning-illustration campaign-world"
+      src="/assets/campaign-world.webp"
+      width={1536}
+      height={1024}
+      alt=""
+      decoding="async"
+    />
   );
 }

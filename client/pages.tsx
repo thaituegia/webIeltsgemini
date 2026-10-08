@@ -52,7 +52,6 @@ import {
   dateLabel,
   skillNames,
 } from "./components";
-import { LearningIllustration } from "./App";
 import { DuoDashboardCard } from "./Duo";
 
 const skillIcons = {
@@ -67,6 +66,89 @@ const skillDescriptions = {
   writing: "Ý tưởng rõ ràng, lập luận chặt",
   speaking: "Tự tin nói, diễn đạt tự nhiên",
 };
+
+/** Decorative board pieces; achievements always come from the real learning data. */
+function CampaignRelic({
+  kind,
+}: {
+  kind: "book" | "scroll" | "forge" | "compass";
+}) {
+  return (
+    <svg className="campaign-relic" viewBox="0 0 132 116" aria-hidden="true">
+      <ellipse cx="66" cy="103" rx="47" ry="9" fill="#234b36" opacity=".12" />
+      <path d="M13 83 66 105 120 83 66 61Z" fill="#ad753e" stroke="#603e26" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M13 83v9l53 22v-9ZM66 105v9l54-22v-9Z" fill="#785332" stroke="#603e26" strokeWidth="3" strokeLinejoin="round" />
+      {kind === "book" && (
+        <g stroke="#543923" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+          <path d="m25 60 39-15 44 19-39 20Z" fill="#d65737" />
+          <path d="M25 60v13l44 20V80ZM69 80l39-16v13L69 93Z" fill="#a23627" />
+          <path d="m25 53 39-15 44 19v10L69 84 25 64Z" fill="#fff3cc" />
+          <path d="m25 51 39-15 44 19-39 17Z" fill="#e87340" />
+          <path d="m64 37 5 35v12" fill="none" />
+          <path d="m83 65 8-3v20l-8-3Z" fill="#2e6849" />
+          <path d="m40 54 16 6m25-1 13-5" stroke="#fff3cc" />
+        </g>
+      )}
+      {kind === "scroll" && (
+        <g stroke="#543923" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M35 31h50l11 53H46Z" fill="#ffefc9" />
+          <path d="M35 31c-14 0-13 15 0 15h13l-2-15ZM85 31c-10 0-10 15 0 15h12" fill="#e3b56c" />
+          <path d="M46 84c-12 0-12 14 0 14h48c13 0 13-14 0-14Z" fill="#e3b56c" />
+          <path d="m51 53 25-2m-22 13 26-2m-23 13 14-1" stroke="#997a4a" />
+          <circle cx="85" cy="71" r="13" fill="#cc4b31" />
+          <path d="m85 64 2 4 4 1-3 3 1 5-4-3-4 3 1-5-3-3 4-1Z" fill="#ffd992" stroke="none" />
+        </g>
+      )}
+      {kind === "forge" && (
+        <g stroke="#543923" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M40 48h51l-7 18H66v15H52V65H38l-14-11Z" fill="#42634d" />
+          <path d="M46 81h26l7 10H39Z" fill="#35513f" />
+          <path d="m70 32 29 28 7-7-29-28Z" fill="#b88044" />
+          <path d="m57 24 13-15 22 21-13 15Z" fill="#e6bd75" />
+          <path d="m36 30 2-10m9 15 8-8m-26 4-8-6" stroke="#e87340" />
+        </g>
+      )}
+      {kind === "compass" && (
+        <g stroke="#543923" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round">
+          <path d="M35 38 66 23l32 15v43L66 97 35 81Z" fill="#ce8f4c" />
+          <circle cx="66" cy="59" r="28" fill="#fbe6b5" />
+          <circle cx="66" cy="59" r="20" fill="#fff5d8" stroke="#c5a168" strokeDasharray="3 4" />
+          <path d="m66 34 10 25-10 25-10-25Z" fill="#2d6647" />
+          <path d="m66 34 10 25H56Z" fill="#df5635" />
+          <circle cx="66" cy="59" r="4" fill="#ffda8c" />
+          <path d="M66 20v-9m-5 0h10" stroke="#dca459" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+function CampaignBanner({
+  kind,
+  eyebrow,
+  title,
+  text,
+  children,
+}: {
+  kind: "book" | "scroll" | "forge" | "compass";
+  eyebrow: string;
+  title: string;
+  text: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className={`campaign-banner campaign-banner-${kind}`}>
+      <div className="campaign-banner-relic"><CampaignRelic kind={kind} /></div>
+      <div className="campaign-banner-copy">
+        <span className="campaign-banner-eyebrow">{eyebrow}</span>
+        <h2>{title}</h2>
+        <p>{text}</p>
+        {children && <div className="campaign-banner-details">{children}</div>}
+      </div>
+    </section>
+  );
+}
+
 function errorMessage(cause: unknown) {
   return cause instanceof Error
     ? cause.message
@@ -117,11 +199,11 @@ export function DashboardPage() {
     timeZone: "Asia/Bangkok",
   }).format(new Date());
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-dashboard">
       <PageHeader
         eyebrow={greeting.toUpperCase()}
         title={`Chào ${name}, cùng tiến bộ nhé.`}
-        description="Một buổi học tập trung hôm nay. Một bước gần hơn đến mục tiêu."
+        description="Mở bản đồ, chọn thử thách và cùng nhau viết tiếp hành trình."
         action={
           <Link to="/plan" className="button secondary small">
             Lộ trình của hai người
@@ -129,16 +211,16 @@ export function DashboardPage() {
           </Link>
         }
       />
-      <section className="dashboard-hero">
+      <section className="dashboard-hero campaign-hero">
         <div className="hero-copy">
           <div className="pill">
             <Sparkles size={15} />
             HÀNH TRÌNH ĐẾN BAND {user.targetBand.toFixed(1)}
           </div>
           <h2>
-            Mỗi bước nhỏ.
+            Mỗi lượt học.
             <br />
-            <em>Một tương lai rộng mở.</em>
+            <em>Một chặng đi xa hơn.</em>
           </h2>
           <p>
             {user.currentBand == null
@@ -162,15 +244,19 @@ export function DashboardPage() {
           </span>
         </div>
         <div className="hero-art">
+          <img
+            className="campaign-world"
+            src="/assets/campaign-world.webp"
+            alt=""
+            decoding="async"
+          />
           <div className="hero-art-tag">
-            A little progress
-            <br />
-            <strong>Every day.</strong>
+            HỎA × MỘC
+            <strong>Hai người. Một hành trình.</strong>
           </div>
-          <LearningIllustration />
           <div className="hero-art-note">
             <span className="status-dot" />
-            Your next chapter starts here
+            Luyện riêng · Vượt mốc cùng nhau
           </div>
         </div>
       </section>
@@ -208,7 +294,7 @@ export function DashboardPage() {
       </div>
       <div className="section-heading">
         <div>
-          <p className="eyebrow">CÂN BẰNG BỐN KỸ NĂNG</p>
+          <p className="eyebrow">BỐN VÙNG ĐẤT · BỐN KỸ NĂNG</p>
           <h2>Hiểu thế mạnh của bạn</h2>
         </div>
         <Link to="/library" className="text-link">
@@ -223,7 +309,7 @@ export function DashboardPage() {
             <Link
               to={`/library?skill=${item.skill}`}
               key={item.skill}
-              className={`skill-card ${item.skill}`}
+              className={`skill-card campaign-skill-card ${item.skill}`}
             >
               <div className="skill-card-top">
                 <span className={`skill-icon ${item.skill}`}>
@@ -263,7 +349,7 @@ export function DashboardPage() {
         <Card>
           <div className="section-heading compact">
             <div>
-              <p className="eyebrow">CHỌN MỘT VIỆC NHỎ</p>
+              <p className="eyebrow">THỬ THÁCH CHO LƯỢT HỌC NÀY</p>
               <h2>Gợi ý dành cho bạn</h2>
             </div>
             <Link
@@ -314,7 +400,7 @@ export function DashboardPage() {
         <Card>
           <div className="section-heading compact">
             <div>
-              <p className="eyebrow">NHÌN LẠI ĐỂ ĐI XA HƠN</p>
+              <p className="eyebrow">DẤU CHÂN TRÊN HÀNH TRÌNH</p>
               <h2>Tiến độ của bạn</h2>
             </div>
             <Badge>{data.completedCount} bài</Badge>
@@ -411,14 +497,14 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
               x2="480"
               y1={height - 25 - (band / 9) * 135}
               y2={height - 25 - (band / 9) * 135}
-              stroke="#e3e8e3"
+              stroke="#e2d5ba"
               strokeDasharray="4 4"
             />
             <text
               x="3"
               y={height - 20 - (band / 9) * 135}
               fontSize="11"
-              fill="#71827c"
+              fill="#6b745d"
             >
               {band}
             </text>
@@ -426,7 +512,7 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
         ))}
         <path
           d={path}
-          stroke="#087d72"
+          stroke="#396747"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -438,7 +524,7 @@ function TrendChart({ dashboard }: { dashboard: Dashboard }) {
             cx={30 + (index * (width - 60)) / Math.max(points.length - 1, 1)}
             cy={height - 25 - (point.estimatedBand / 9) * 135}
             r="4"
-            fill="#087d72"
+            fill="#396747"
           >
             <title>
               {point.day} · {skillNames[point.skill]} ·{" "}
@@ -503,9 +589,9 @@ export function PlanPage() {
   const done = plan.tasks.filter((task) => task.completed).length;
   const days = [...new Set(plan.tasks.map((task) => task.day))];
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-plan">
       <PageHeader
-        eyebrow="HỌC ĐÚNG ĐIỀU BẠN CẦN"
+        eyebrow="NHẬT LỆNH TUẦN NÀY"
         title="Lộ trình của hai người"
         description="Từng buổi học nhỏ, cùng hướng về một mục tiêu lớn."
         action={
@@ -515,7 +601,8 @@ export function PlanPage() {
           </Link>
         }
       />
-      <Card className="plan-summary">
+      <Card className="plan-summary campaign-plan-summary">
+        <CampaignRelic kind="compass" />
         <div>
           <Badge>Tuần bắt đầu {dateLabel(plan.weekStart)}</Badge>
           <h2>Hướng đến band {plan.targetBand.toFixed(1)}</h2>
@@ -698,11 +785,11 @@ export function VocabularyPage() {
   const due = cards.data?.cards.filter((card) => card.due) || [];
   const activeCard = due[0];
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-vocabulary">
       <PageHeader
-        eyebrow="NHỚ LÂU HƠN, DÙNG TỰ NHIÊN HƠN"
+        eyebrow="KHO HÀNH TRANG NGÔN NGỮ"
         title="Sổ từ vựng"
-        description="Khám phá từ vựng theo chủ đề. Ôn đúng lúc với lịch lặp lại ngắt quãng FSRS."
+        description="Khám phá từ theo chủ đề, lưu vào sổ và ôn đúng lúc để nhớ lâu hơn."
         action={
           <Button className="secondary" onClick={() => setCustom(true)}>
             <Plus size={17} />
@@ -710,6 +797,19 @@ export function VocabularyPage() {
           </Button>
         }
       />
+      <CampaignBanner
+        kind="book"
+        eyebrow="MỖI TỪ LÀ MỘT MẢNH HÀNH TRANG"
+        title="Gom từng từ. Mở rộng vốn diễn đạt."
+        text="Lưu từ bạn cần, lật thẻ để thử trí nhớ rồi chọn mức độ nhớ thật của mình."
+      >
+        {cards.data && (
+          <>
+            <span><BookOpen size={15} />{cards.data.cards.length} từ đã lưu</span>
+            <span><Clock3 size={15} />{cards.data.dueCount} thẻ đến hạn ôn</span>
+          </>
+        )}
+      </CampaignBanner>
       <div className="tabs" role="tablist" aria-label="Chế độ từ vựng">
         <button
           role="tab"
@@ -953,6 +1053,7 @@ export function VocabularyPage() {
               <Badge>Lặp lại ngắt quãng · FSRS</Badge>
             </div>
             <Card className={`flashcard ${flipped ? "flipped" : ""}`}>
+              <span className="campaign-flashcard-eyebrow">THỬ THÁCH TRÍ NHỚ</span>
               <Badge>
                 {activeCard.cefr} · {activeCard.topic}
               </Badge>
@@ -1153,11 +1254,17 @@ export function HistoryPage() {
     attempts: AttemptSummary[];
   }>(`/attempts?skill=${skill}&status=${status}`);
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-history">
       <PageHeader
-        eyebrow="MỌI BƯỚC TIẾN ĐỀU ĐƯỢC GHI NHẬN"
+        eyebrow="NHẬT KÝ CHIẾN DỊCH"
         title="Lịch sử học"
         description="Mở lại bài đã làm, xem phản hồi và tiếp tục bài đang dang dở."
+      />
+      <CampaignBanner
+        kind="scroll"
+        eyebrow="NHÌN LẠI NHỮNG LƯỢT HỌC"
+        title="Mỗi buổi học để lại một dấu chân."
+        text="Bài đang làm và kết quả đã nộp được giữ trong nhật ký. Chọn một bài để tiếp tục hoặc xem lại phản hồi."
       />
       <div className="filter-bar">
         <select
@@ -1338,11 +1445,17 @@ export function ErrorsPage() {
     }
   }
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-errors">
       <PageHeader
-        eyebrow="HIỂU LỖI, LUYỆN ĐÚNG"
+        eyebrow="XƯỞNG RÈN KỸ NĂNG"
         title="Sổ lỗi thường gặp"
         description="Những điểm cần luyện được tổng hợp từ câu trả lời thật của bạn."
+      />
+      <CampaignBanner
+        kind="forge"
+        eyebrow="RÈN LẠI · HIỂU SÂU HƠN"
+        title="Biến từng lỗi nhỏ thành một bước tiến."
+        text="Đối chiếu câu trả lời với bằng chứng và luyện lại đúng dạng bài. Đây là nơi chuẩn bị cho thử thách tiếp theo."
       />
       {actionError && <ErrorNotice message={actionError} />}{" "}
       {loading ? (
@@ -1485,12 +1598,21 @@ export function SettingsPage() {
     }
   }
   return (
-    <div className="stack page-stack">
+    <div className="stack page-stack campaign-settings">
       <PageHeader
-        eyebrow="HỌC THEO NHỊP CỦA BẠN"
+        eyebrow="CHUẨN BỊ HÀNH TRANG"
         title="Hồ sơ & cài đặt"
         description="Một mục tiêu rõ ràng giúp mỗi buổi học có ý nghĩa hơn."
       />
+      <CampaignBanner
+        kind="compass"
+        eyebrow="LA BÀN CỦA BẠN"
+        title="Chuẩn bị cho chặng đường tiếp theo."
+        text="Chọn nhịp học phù hợp và theo dõi mục tiêu. Lộ trình cùng nhau vẫn dựa trên kết quả học thực tế."
+      >
+        <span><Target size={15} />Mục tiêu band {user.targetBand.toFixed(1)}</span>
+        <span><Clock3 size={15} />{user.dailyMinutes} phút mỗi ngày</span>
+      </CampaignBanner>
       {error && <ErrorNotice message={error} />}{" "}
       {notice && (
         <div className="notice success" role="status">

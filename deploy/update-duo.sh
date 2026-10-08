@@ -412,6 +412,67 @@ PYASSET
 curl_domain --fail "$origin$asset" -D "$audit_dir/asset.headers" -o "$audit_dir/app.js"
 awk 'tolower($0)~/^content-type:.*(javascript|ecmascript)/{ok=1}END{exit !ok}' "$audit_dir/asset.headers" || die 'File frontend trả sai kiểu dữ liệu.'
 [[ "$(wc -c < "$audit_dir/app.js")" -gt 100 ]] || die 'JavaScript trống.'
+# Public files retain their paths when Vite copies them into dist. Verify the
+# exact image bytes through the existing HTTPS gateway, not just HTTP 200: a
+# missing font/image otherwise falls through to the SPA's index.html response.
+python3 - "$audit_dir/index.html" "$source_dir/public" "$new_app_id" "$audit_dir/static-assets.tsv" <<'PYSTATICMANIFEST' || die 'Không đối chiếu được CSS, hình ảnh và font trong image mới.'
+import hashlib,json,pathlib,re,subprocess,sys
+from html.parser import HTMLParser
+class Stylesheets(HTMLParser):
+ def __init__(self):super().__init__();self.paths=[]
+ def handle_starttag(self,tag,attrs):
+  attributes=dict(attrs)
+  if tag=='link' and 'stylesheet' in (attributes.get('rel') or '').lower().split():self.paths.append(attributes.get('href'))
+parser=Stylesheets();parser.feed(pathlib.Path(sys.argv[1]).read_text())
+paths=sorted(set(parser.paths));assert paths, 'Deployed HTML has no linked stylesheet'
+mimes={'.css':'text/css','.webp':'image/webp','.svg':'image/svg+xml','.woff2':'font/woff2'}
+def validate(path):
+ assert isinstance(path,str) and re.fullmatch(r'/(assets|fonts)/[A-Za-z0-9_./-]+',path)
+ parts=pathlib.PurePosixPath(path);assert '..' not in parts.parts and str(parts)==path
+ return parts.suffix.lower()
+for path in paths:assert validate(path)=='.css' and path.startswith('/assets/')
+expected={};public=pathlib.Path(sys.argv[2])
+for folder in ['assets','fonts']:
+ for file in sorted((public/folder).rglob('*')):
+  if file.is_file() and file.suffix.lower() in ['.webp','.svg','.woff2']:
+   assert not file.is_symlink()
+   path='/'+file.relative_to(public).as_posix();validate(path)
+   data=file.read_bytes();assert 0<len(data)<=16*1024*1024
+   expected[path]={'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
+paths=sorted(set(paths)|set(expected));assert 1<=len(paths)<=128
+image_program=r'''
+const fs=require("node:fs"),crypto=require("node:crypto"),path=require("node:path");
+const root="/app/dist";
+const rows=JSON.parse(process.argv[1]).map(url=>{
+ const target=path.resolve(root,"."+url);
+ if(!target.startsWith(root+"/")||fs.realpathSync(target)!==target)throw Error("Invalid static image path");
+ const stat=fs.statSync(target);if(!stat.isFile()||stat.size<=0||stat.size>16*1024*1024)throw Error("Invalid static image file");
+ const data=fs.readFileSync(target);return {path:url,sha256:crypto.createHash("sha256").update(data).digest("hex"),bytes:data.length};
+});console.log(JSON.stringify(rows));
+'''
+result=subprocess.run(['docker','exec',sys.argv[3],'node','-e',image_program,json.dumps(paths)],capture_output=True,text=True,timeout=30)
+assert result.returncode==0, 'Cannot read built static files from the new app'
+rows=json.loads(result.stdout);assert isinstance(rows,list) and [row['path'] for row in rows]==paths
+assert sum(row['bytes'] for row in rows)<=32*1024*1024
+with open(sys.argv[4],'x') as output:
+ for row in rows:
+  assert re.fullmatch(r'[a-f0-9]{64}',row['sha256']) and 0<row['bytes']<=16*1024*1024
+  if row['path'] in expected:assert {key:row[key] for key in ['sha256','bytes']}==expected[row['path']], 'Public static asset differs from source'
+  output.write(f"{row['path']}\t{row['sha256']}\t{row['bytes']}\t{mimes[validate(row['path'])]}\n")
+PYSTATICMANIFEST
+static_index=0
+while IFS=$'\t' read -r static_path static_sha static_bytes static_mime; do
+  static_index=$((static_index + 1))
+  curl_domain --fail --max-filesize 16777216 "$origin$static_path" -D "$audit_dir/static-$static_index.headers" -o "$audit_dir/static-$static_index.body" || die 'Không tải được CSS, hình ảnh hoặc font qua HTTPS.'
+  python3 - "$audit_dir/static-$static_index.headers" "$audit_dir/static-$static_index.body" "$static_sha" "$static_bytes" "$static_mime" <<'PYSTATICCHECK' || die 'CSS, hình ảnh hoặc font trả sai kiểu dữ liệu/nội dung; chưa xác nhận cập nhật.'
+import hashlib,pathlib,re,sys
+headers=pathlib.Path(sys.argv[1]).read_text()
+types=re.findall(r'^content-type:\s*([^\r\n]+)',headers,re.I|re.M)
+assert types and types[-1].split(';')[0].strip().lower()==sys.argv[5], 'Static asset MIME mismatch'
+data=pathlib.Path(sys.argv[2]).read_bytes()
+assert len(data)==int(sys.argv[4]) and hashlib.sha256(data).hexdigest()==sys.argv[3], 'Static asset bytes differ from the deployed image'
+PYSTATICCHECK
+done < "$audit_dir/static-assets.tsv"
 preserve_ip_endpoint || die 'Endpoint IP cũ chưa hoạt động sau cập nhật.'
 verify_existing || die 'Container/cổng/cấu hình khác đã thay đổi trong lúc cập nhật.'
 printf '%s\n' "$source_commit" > "$audit_dir/source.commit"

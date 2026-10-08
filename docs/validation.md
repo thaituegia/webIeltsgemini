@@ -1,5 +1,17 @@
 # Kết quả kiểm tra
 
+## Giao diện chiến dịch Hỏa + Mộc — 2026-10-08
+
+Production build TypeScript/Vite đạt. **30/30 Playwright tests** trên desktop 1440px và mobile 390px đạt, gồm toàn bộ 26 kiểm tra trước đó và bốn kiểm tra giao diện chiến dịch mới. Các trang đăng nhập, tổng quan, thư viện, thi thử, đầu vào, lộ trình, từ vựng, lịch sử, sổ lỗi và cài đặt tải được font/ảnh, không tràn ngang. Font Be Vietnam Pro tải được các trọng lượng dùng trong UI với mẫu tiếng Việt; các tiêu đề không dùng serif fallback hoặc khoảng cách chữ âm.
+
+Sau chỉnh sửa nhỏ để caption minh họa dashboard tách hai dòng, production build và **4/4 kiểm tra chiến dịch** được chạy lại, đạt; ảnh preview đã được chụp từ bundle cuối này.
+
+Kiểm tra bằng hai tài khoản tổng hợp trong MongoDB riêng xác nhận: một người hoàn thành chưa mở huy hiệu chung; cả hai hoàn thành mở đúng huy hiệu đầu tiên; một người đạt Gate chưa mở chặng sau, cả hai đạt mới mở huy hiệu Gate và các buổi kế tiếp. Chọn quân cờ chỉ đưa tới thẻ buổi học, không ghi tiến độ hay bỏ qua khóa. Các kiểm tra bài đọc, nghe, biểu đồ, sơ đồ, nháp Writing, WAV Speaking, lịch sử và FSRS cũ vẫn đạt.
+
+**30/30 kiểm tra updater**, không skip, gồm native MongoDB, đạt sau khi thêm đối chiếu CSS, WebP/SVG và WOFF2 qua HTTPS theo MIME, dung lượng và SHA256 của image đã build. Kiểm tra từ chối trang HTML200 giả tài nguyên, font sai nguồn và CSS cũ dù cùng dung lượng. Không chạy triển khai VPS trong lượt kiểm tra này; cloud vẫn không kết nối được SSH22 tới VPS. HTTPS công khai hiện xác nhận website đang dùng Duo phone auth và ngân hàng 544/84/744/640; đây chưa phải bằng chứng giao diện chiến dịch đã lên live.
+
+Thay đổi giao diện không sửa mã backend, seed hoặc ngân hàng học liệu. Font được đóng gói cùng website với giấy phép OFL; không yêu cầu truy cập Google Fonts. Ảnh preview dùng tài khoản tổng hợp, không chứa thông tin đăng nhập thật.
+
 ## Duo và học liệu band 7.5–8.0 — 2026-10-08
 
 Hai tài khoản cố định đăng nhập bằng số điện thoại, với tên và mục tiêu 8.0 từ cấu hình riêng chứa hash scrypt. Không có số điện thoại hoặc mật khẩu thật trong source/bundle. Session cũ chưa gắn đúng danh tính không thể đăng nhập vào bản Duo. Kho bài và thi thường mở độc lập; backend bảo vệ riêng tiến độ lộ trình, Gate và kỳ thi nâng band.

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import {
+  readFileSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -301,6 +307,192 @@ function executeVerifier(state: ReturnType<typeof fixture>) {
   );
   return { output, accessed, error };
 }
+
+function embeddedPython(name: string) {
+  const code = script.match(
+    new RegExp(`<<'${name}'[^\\n]*\\n([\\s\\S]*?)\\n${name}`),
+  )?.[1];
+  assert.ok(code, `Actual embedded ${name} must be testable`);
+  return code;
+}
+const staticManifestCode = embeddedPython("PYSTATICMANIFEST");
+const staticCheckCode = embeddedPython("PYSTATICCHECK");
+function staticFixture(
+  change?: (context: { directory: string; publicDir: string; image: string }) => void,
+) {
+  const directory = mkdtempSync(join(tmpdir(), "ielts-duo-static-"));
+  const publicDir = join(directory, "public");
+  const image = join(directory, "dist");
+  try {
+    for (const base of [publicDir, image])
+      for (const folder of ["assets", "fonts"])
+        mkdirSync(join(base, folder), { recursive: true });
+    const contents = {
+      "assets/board.webp": Buffer.from("Controlled WebP fixture bytes"),
+      "assets/badge.svg": Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+      "fonts/vietnamese.woff2": Buffer.from("Controlled WOFF2 fixture bytes"),
+    };
+    for (const [path, data] of Object.entries(contents)) {
+      writeFileSync(join(publicDir, path), data);
+      writeFileSync(join(image, path), data);
+    }
+    writeFileSync(join(publicDir, "fonts/LICENSE.txt"), "Synthetic font license");
+    writeFileSync(join(image, "assets/index-controlled.css"), "body{color:#224c37}");
+    writeFileSync(
+      join(directory, "index.html"),
+      '<link rel="stylesheet" href="/assets/index-controlled.css"><link rel="stylesheet" href="/assets/index-controlled.css">',
+    );
+    // Only replace the image's filesystem root. Run the actual Node reader from
+    // the deployment script, without Docker access or a production app restart.
+    writeFileSync(
+      join(directory, "docker"),
+      `#!/usr/bin/env python3
+import json,os,sys
+assert sys.argv[1:5]==['exec','synthetic-static-app','node','-e']
+marker='const root="/app/dist";'
+assert sys.argv[5].count(marker)==1
+program=sys.argv[5].replace(marker,'const root='+json.dumps(${JSON.stringify(image)})+';')
+os.execvp('node',['node','-e',program,sys.argv[6]])
+`,
+      { mode: 0o700 },
+    );
+    change?.({ directory, publicDir, image });
+    const manifest = join(directory, "static-assets.tsv");
+    const result = spawnSync(
+      "python3",
+      [
+        "-c",
+        staticManifestCode,
+        join(directory, "index.html"),
+        publicDir,
+        "synthetic-static-app",
+        manifest,
+      ],
+      {
+        encoding: "utf8",
+        env: { ...process.env, PATH: `${directory}:${process.env.PATH}` },
+        timeout: 10_000,
+      },
+    );
+    return {
+      status: result.status,
+      stderr: result.stderr,
+      rows:
+        result.status === 0
+          ? readFileSync(manifest, "utf8")
+              .trim()
+              .split("\n")
+              .map((row) => row.split("\t"))
+          : [],
+    };
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+function verifyStaticResponse(
+  expected: Buffer,
+  mime: string,
+  actual = expected,
+  servedMime = mime,
+) {
+  const directory = mkdtempSync(join(tmpdir(), "ielts-duo-static-response-"));
+  try {
+    const headers = join(directory, "headers"),
+      body = join(directory, "body");
+    writeFileSync(
+      headers,
+      `HTTP/1.1 200 OK\r\nCoNtEnT-TyPe: ${servedMime}; charset=utf-8\r\n\r\n`,
+    );
+    writeFileSync(body, actual);
+    return spawnSync(
+      "python3",
+      [
+        "-c",
+        staticCheckCode,
+        headers,
+        body,
+        createHash("sha256").update(expected).digest("hex"),
+        String(expected.length),
+        mime,
+      ],
+      { encoding: "utf8", timeout: 5000 },
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+test("Duo static manifest checks linked built CSS and every public WebP/SVG/WOFF2 against actual image bytes", () => {
+  const result = staticFixture();
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(
+    result.rows.map(([path, , , mime]) => [path, mime]),
+    [
+      ["/assets/badge.svg", "image/svg+xml"],
+      ["/assets/board.webp", "image/webp"],
+      ["/assets/index-controlled.css", "text/css"],
+      ["/fonts/vietnamese.woff2", "font/woff2"],
+    ],
+  );
+  for (const [, sha256, bytes] of result.rows) {
+    assert.match(sha256, /^[a-f0-9]{64}$/);
+    assert.ok(Number(bytes) > 0);
+  }
+});
+test("Duo static manifest rejects absent built CSS instead of trusting the HTML stylesheet link", () => {
+  const result = staticFixture(({ image }) => {
+    rmSync(join(image, "assets/index-controlled.css"));
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Cannot read built static files/);
+});
+test("Duo static manifest rejects image font bytes that differ from the pinned public source", () => {
+  const result = staticFixture(({ image }) => {
+    writeFileSync(
+      join(image, "fonts/vietnamese.woff2"),
+      "Corrupted! WOFF2 fixture bytes",
+    );
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Public static asset differs from source/);
+});
+for (const href of ["https://example.invalid/style.css", "/assets/../fonts/style.css"])
+  test(`Duo static manifest refuses stylesheet path ${href}`, () => {
+    const result = staticFixture(({ directory }) => {
+      writeFileSync(
+        join(directory, "index.html"),
+        `<link rel="stylesheet" href="${href}">`,
+      );
+    });
+    assert.notEqual(result.status, 0);
+  });
+test("Duo HTTPS static check accepts matching CSS, WebP, SVG and WOFF2 bytes with their correct MIME", () => {
+  for (const mime of ["text/css", "image/webp", "image/svg+xml", "font/woff2"]) {
+    const result = verifyStaticResponse(Buffer.from(`Controlled ${mime}`), mime);
+    assert.equal(result.status, 0, result.stderr);
+  }
+});
+test("Duo HTTPS static check rejects HTTP200 SPA HTML returned for a missing font or image", () => {
+  const expected = Buffer.from("Controlled static image bytes"),
+    html = Buffer.from("<!doctype html><html>SPA fallback</html>");
+  for (const mime of ["font/woff2", "image/webp"]) {
+    const wrongMime = verifyStaticResponse(expected, mime, html, "text/html");
+    assert.notEqual(wrongMime.status, 0);
+    assert.match(wrongMime.stderr, /Static asset MIME mismatch/);
+    const disguised = verifyStaticResponse(expected, mime, html);
+    assert.notEqual(disguised.status, 0);
+    assert.match(disguised.stderr, /Static asset bytes differ/);
+  }
+});
+test("Duo HTTPS static check rejects stale CSS with the correct MIME and equal byte length", () => {
+  const result = verifyStaticResponse(
+    Buffer.from("body{color:red}"),
+    "text/css",
+    Buffer.from("body{color:tan}"),
+  );
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Static asset bytes differ/);
+});
 
 test("Duo update shell is scoped to app, keeps EAGAIN-safe helper, and compiles every embedded Python block", () => {
   assert.equal(

@@ -4,13 +4,13 @@
   min-width: 0;
 }
 .learning-disclaimer {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
-  color: #8b9b87;
+  color: #566950;
   margin: 0;
 }
 .tiny {
-  font-size: 10px !important;
+  font-size: 12px !important;
 }
 .row.wrap {
   flex-wrap: wrap;
@@ -19,82 +19,80 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 27px 32px;
-  background: #e9f0e1;
-  border: 1px solid #dce7d4;
-  border-radius: 13px;
+  padding: 28px 34px;
+  min-height: 232px;
+  gap: 18px;
+  background: radial-gradient(ellipse at 95% 15%, #e3e9cf 0, transparent 58%), #f6ead3;
+  border: 2px solid #c9b18a;
+  border-radius: 20px;
+  box-shadow: 0 5px 0 #d8c3a2, inset 0 0 0 5px #fff8e650;
   position: relative;
   overflow: hidden;
 }
+.library-intro-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+}
+.campaign-intro-art {
+  display: block;
+  flex: 0 0 36%;
+  width: 36%;
+  max-width: 330px;
+  height: auto;
+  overflow: visible;
+  margin: -15px -5px -17px 0;
+}
 .library-intro h2 {
-  font-family: Georgia, serif;
-  font-size: 29px;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-size: clamp(24px, 2.1vw, 31px);
+  font-weight: 700;
   margin: 13px 0 10px;
-  color: #375c45;
-  letter-spacing: -0.035em;
+  color: #214b36;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-wrap: balance;
 }
 .library-intro p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
-  color: #788d71;
+  color: #214b36;
   max-width: 640px;
   margin: 0;
 }
 .library-intro .badge {
-  background: #f7faf0;
-  color: #769067;
-  font-size: 8px;
-  letter-spacing: 0.08em;
-}
-.library-intro-mark {
-  width: 125px;
-  height: 125px;
-  border: 1px solid #b9cbae;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7b9970;
-  position: relative;
-  flex-shrink: 0;
-  margin: 0 15px 0 35px;
-  transform: rotate(-9deg);
-}
-.library-intro-mark:before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border: 1px dashed #bfd0b4;
-  border-radius: 50%;
+  background: #a73f28;
+  color: #fff6df;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  border: 1px solid #8b3a29;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 .exam-intro {
-  background: #173f3d;
-  border-color: #173f3d;
+  background: radial-gradient(ellipse at 100% 0, #527246 0, transparent 70%), #214b36;
+  border-color: #496a43;
+  box-shadow: 0 5px 0 #183c2a, inset 0 0 0 5px #91aa5820;
 }
 .exam-intro h2 {
-  color: #e5ead7;
+  color: #fff5d9;
 }
 .exam-intro p {
-  color: #a3baa4;
+  color: #e4edce;
 }
 .exam-intro .badge {
-  background: #2d5148;
-  color: #cad6b9;
-}
-.exam-intro .library-intro-mark {
-  color: #d1d2ad;
-  border-color: #4d6d58;
-}
-.exam-intro .library-intro-mark:before {
-  border-color: #4d6d58;
+  background: #d6a048;
+  color: #392c1c;
+  border-color: #e9c078;
 }
 .learning-skill-tabs {
   display: flex;
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #dde5d6;
+  border-bottom: 1px solid #d8c8ac;
   padding-bottom: 13px;
 }
 .learning-skill-tabs button {
@@ -103,22 +101,24 @@
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 7px;
-  font-size: 12px;
-  color: #82917a;
+  border: 1px solid #d1c1a4;
+  background: #fff9e9;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #566950;
   cursor: pointer;
+  min-height: 44px;
 }
 .learning-skill-tabs button.active {
-  background: #edf3e7;
-  border-color: #dce7d3;
-  color: #527545;
-  font-weight: 650;
+  background: #214b36;
+  border-color: #173b2a;
+  color: #fff6dc;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #102f21;
 }
 .learning-skill-tabs button:hover {
-  color: #426744;
-  background: #f0f4e9;
+  color: #214b36;
+  background: #fffdf6;
 }
 .learning-filters .search-field {
   min-width: 170px;
@@ -132,9 +132,9 @@
   gap: 20px;
 }
 .content-card {
-  border: 1px solid #dfe6d7;
-  background: #fff;
-  border-radius: 12px;
+  border: 2px solid #d4c2a3;
+  background: #fffdf6;
+  border-radius: 17px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -142,49 +142,49 @@
     transform 0.2s,
     border-color 0.2s;
   min-width: 0;
+  box-shadow: 0 4px 0 #ddcbb0;
 }
 .content-card:hover {
   transform: translateY(-3px);
-  border-color: #abc3a1;
+  border-color: #718b59;
+  box-shadow: 0 7px 0 #c9ba98;
 }
 .content-art {
-  height: 125px;
-  background: #ecf2e6;
+  height: 148px;
+  background: #e6eacb;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 13px;
   position: relative;
-  color: #829c75;
+  color: #375d3c;
   overflow: hidden;
+  border-bottom: 2px solid #d4c2a3;
 }
-.content-art:before {
-  content: "";
+.content-art > .content-art-landscape {
   position: absolute;
-  border: 1px solid #ffffff90;
-  width: 145px;
-  height: 145px;
-  border-radius: 50%;
-  right: -20px;
-  top: -53px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 }
-.content-art:after {
-  content: "";
-  position: absolute;
-  border: 1px solid #ffffff90;
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  right: 6px;
-  top: -27px;
-}
-.content-art > svg {
+.content-skill-token {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
   position: relative;
-  z-index: 1;
+  background: #fff7df;
+  border: 2px solid #b99658;
+  border-radius: 17px;
+  box-shadow: 0 4px 0 #a38552;
+  transform: rotate(-6deg);
 }
 .content-art > span:last-child {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 15px;
+  font-weight: 700;
   position: relative;
   z-index: 1;
   max-width: 55%;
@@ -194,24 +194,30 @@
   position: absolute;
   left: 17px;
   top: 14px;
-  font-size: 9px;
-  color: #9bac91;
+  font-size: 12px;
+  color: #fff7dd;
+  background: #335740;
+  padding: 4px 7px;
+  border: 1px solid #1e3f2a;
+  border-radius: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .listening .content-art {
-  background: #e8edf5;
-  color: #849bb6;
+  background: #dde7cf;
+  color: #315c43;
 }
 .writing .content-art {
-  background: #f5eadc;
-  color: #b59872;
+  background: #f4dfc3;
+  color: #a6462c;
 }
 .speaking .content-art {
-  background: #ede7f1;
-  color: #a18aaf;
+  background: #f3e6be;
+  color: #835c2d;
 }
 .grammar .content-art {
-  background: #f2eedf;
-  color: #a79872;
+  background: #e2e5c1;
+  color: #476342;
 }
 .content-card-body {
   padding: 21px;
@@ -223,21 +229,21 @@
   gap: 5px;
 }
 .content-card .badge {
-  font-size: 8px;
+  font-size: 12px;
   padding: 3px 7px;
 }
 .content-card h3 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 19px;
   line-height: 1.45;
-  font-weight: 400;
+  font-weight: 700;
   margin: 15px 0 9px;
-  letter-spacing: -0.02em;
-  color: #395945;
+  letter-spacing: 0;
+  color: #214b36;
 }
 .content-card p {
-  font-size: 11px;
-  color: #8e9d84;
+  font-size: 13px;
+  color: #566950;
   line-height: 1.8;
   margin: 0 0 18px;
   display: -webkit-box;
@@ -249,8 +255,8 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 9px;
-  color: #8d9d83;
+  font-size: 12px;
+  color: #566950;
   margin: auto 0 17px;
   line-height: 1.8;
 }
@@ -261,10 +267,19 @@
 }
 .content-card .button {
   width: 100%;
-  font-size: 10px;
+  font-size: 12px;
   justify-content: space-between;
-  min-height: 39px;
+  min-height: 44px;
   padding: 9px 13px;
+}
+.content-card .button.secondary {
+  color: #fff8e4;
+  background: #b6472e;
+  border: 1px solid #963922;
+  box-shadow: 0 3px 0 #863320;
+}
+.content-card .button.secondary:hover {
+  background: #9f3e28;
 }
 .resume-panel {
   padding: 20px 25px !important;
@@ -281,9 +296,9 @@
   display: flex;
   align-items: center;
   gap: 15px;
-  border-top: 1px solid #edf0e6;
+  border-top: 1px solid #d8c8ac;
   padding: 14px 0;
-  color: #67815b;
+  color: #214b36;
   min-width: 0;
 }
 .resume-item > span {
@@ -291,10 +306,10 @@
   min-width: 0;
 }
 .resume-item .badge {
-  font-size: 8px;
+  font-size: 12px;
 }
 .resume-item strong {
-  font-size: 11px;
+  font-size: 13px;
   display: block;
   font-weight: 600;
   margin-top: 6px;
@@ -304,8 +319,8 @@
 }
 .resume-item small {
   display: block;
-  font-size: 9px;
-  color: #97a38c;
+  font-size: 12px;
+  color: #566950;
   margin-top: 5px;
 }
 .exam-format-grid {
@@ -315,63 +330,69 @@
 }
 .exam-format-grid > div {
   padding: 18px 20px;
-  background: white;
-  border: 1px solid #e1e7d9;
-  border-radius: 9px;
+  background: #fff8e7;
+  border: 2px solid #d2bd99;
+  border-top: 5px solid #a7432a;
+  border-radius: 13px;
   display: flex;
   flex-direction: column;
   gap: 7px;
+  box-shadow: 0 3px 0 #decbab;
+}
+.exam-format-grid > div:nth-child(even) {
+  border-top-color: #3e6644;
 }
 .exam-format-grid strong {
   font-size: 13px;
-  color: #63835a;
+  color: #214b36;
 }
 .exam-format-grid span {
-  font-size: 9px;
-  color: #95a28a;
+  font-size: 12px;
+  color: #566950;
   line-height: 1.6;
 }
 .learning-breadcrumb {
   display: flex;
   align-items: center;
   gap: 11px;
-  font-size: 10px;
-  color: #8a9a81;
+  font-size: 12px;
+  color: #566950;
 }
 .learning-breadcrumb a {
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #6f8c62;
+  color: #214b36;
 }
 .learning-heading-icon {
   width: 56px;
   height: 56px;
-  background: #edf3e5;
-  border: 1px solid #dce7d2;
+  background: #edf0df;
+  border: 1px solid #d8c8ac;
   border-radius: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #7e9d6a;
+  color: #566950;
 }
 .attempt-toolbar {
   padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid #dce5d3;
-  border-radius: 10px;
-  background: #fff;
+  border: 2px solid #d0bd9a;
+  border-radius: 14px;
+  background: #fffdf6;
   gap: 15px;
+  box-shadow: 0 3px 0 #ddcbb0;
 }
 .attempt-toolbar > .row {
   gap: 12px;
-  font-size: 10px;
-  color: #8a9b7d;
+  font-size: 12px;
+  color: #566950;
 }
 .attempt-toolbar .badge {
-  font-size: 9px;
+  font-size: 12px;
 }
 .attempt-status {
   display: flex;
@@ -383,38 +404,38 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
-  color: #83a074;
+  font-size: 12px;
+  color: #566950;
 }
 .draft-status.pending,
 .draft-status.saving {
-  color: #a98c57;
+  color: #a8432e;
 }
 .draft-status.error {
-  color: #bd7461;
+  color: #a8432e;
 }
 .attempt-timer {
   display: flex;
   align-items: center;
   gap: 7px;
   font-variant-numeric: tabular-nums;
-  font-family: "Manrope", Arial, sans-serif;
-  font-weight: 650;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   font-size: 17px;
-  color: #567b4d;
+  color: #214b36;
 }
 .time-warning {
-  border-color: #dbafa0;
-  background: #fffaf7;
+  border-color: #d8c8ac;
+  background: #fffdf6;
 }
 .time-warning .attempt-timer {
-  color: #b5634e;
+  color: #a8432e;
 }
 .exam-notice {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.8;
-  background: #eef3e8 !important;
-  color: #7d906e !important;
+  background: #fffdf6 !important;
+  color: #214b36 !important;
 }
 .section-tabs {
   display: flex;
@@ -422,34 +443,54 @@
   flex-wrap: wrap;
 }
 .section-tabs button {
-  border: 1px solid #dce5d3;
-  border-radius: 8px;
-  background: #fff;
+  border: 1px solid #d8c8ac;
+  border-radius: 11px;
+  background: #fffdf6;
   padding: 11px 15px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  font-size: 11px;
-  color: #6f8960;
+  font-size: 13px;
+  color: #214b36;
   cursor: pointer;
   max-width: 250px;
   text-align: left;
   flex: 1;
 }
 .section-tabs button span {
-  font-size: 9px;
-  color: #99a78e;
+  font-size: 12px;
+  color: #566950;
   line-height: 1.5;
 }
 .section-tabs button.active {
-  background: #e9f2df;
-  border-color: #bad0a8;
-  color: #567745;
-  font-weight: 650;
+  background: #315a3e;
+  border-color: #21402d;
+  color: #fff5d7;
+  font-weight: 700;
 }
 .section-tabs button.active span {
-  color: #7d986b;
+  color: #e2ebcc;
+}
+.practice-band-guide {
+  border: 1px solid #d0bb91;
+  border-radius: 13px;
+  background: #fff5dd;
+  padding: 17px 20px;
+  color: #4b5e42;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.practice-band-guide summary {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  cursor: pointer;
+  color: #a44129;
+  font-weight: 700;
+}
+.practice-band-guide > div {
+  margin-top: 17px;
 }
 .practice-split {
   display: grid;
@@ -467,17 +508,17 @@
 .questions-card h2,
 .writing-prompt h2,
 .writing-editor h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 23px;
   line-height: 1.45;
-  font-weight: 400;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 .reading-passage {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 15px;
   line-height: 1.95;
-  color: #52664c;
+  color: #214b36;
 }
 .reading-passage p {
   white-space: pre-wrap;
@@ -488,9 +529,9 @@
 }
 .passage-instructions,
 .prompt-instructions {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #849473;
+  color: #566950;
   font-style: italic;
   margin: 15px 0;
 }
@@ -506,10 +547,10 @@
   min-width: 0;
 }
 .practice-question legend {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
-  font-weight: 550;
-  color: #527248;
+  font-weight: 600;
+  color: #214b36;
   margin-bottom: 13px;
   float: left;
   width: 100%;
@@ -523,20 +564,21 @@
   height: 22px;
   min-width: 22px;
   padding: 1px 4px;
-  background: #ecf2e4;
-  color: #789969;
-  border-radius: 5px;
+  background: #f0dfb0;
+  color: #694a22;
+  border: 1px solid #bea36f;
+  border-radius: 6px;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  font-size: 9px;
-  font-weight: 650;
+  font-size: 12px;
+  font-weight: 700;
   flex-shrink: 0;
   margin-top: 1px;
 }
 .question-limit {
-  font-size: 10px;
-  color: #9aab8c;
+  font-size: 12px;
+  color: #566950;
   margin: 0 0 12px;
 }
 .answer-options {
@@ -549,71 +591,71 @@
   align-items: center;
   gap: 10px;
   padding: 10px 13px;
-  border: 1px solid #e1e9d8;
+  border: 1px solid #d8c8ac;
   border-radius: 7px;
   cursor: pointer;
   min-height: 42px;
-  background: #fcfdf9;
+  background: #fffdf6;
   line-height: 1.65;
-  font-size: 11px;
-  color: #7a906d;
+  font-size: 13px;
+  color: #214b36;
 }
 .answer-option:hover {
-  border-color: #b7cd9f;
-  background: #f7faef;
+  border-color: #d8c8ac;
+  background: #fffdf6;
 }
 .answer-option.selected {
-  border-color: #a0bf87;
-  background: #f0f7e6;
-  color: #537344;
+  border-color: #718b59;
+  background: #e8edd6;
+  color: #214b36;
 }
 .answer-option input {
-  accent-color: #6d9455;
+  accent-color: #214b36;
   flex-shrink: 0;
   margin: 0;
   width: 13px;
   height: 13px;
 }
 .option-letter {
-  font-size: 9px;
+  font-size: 12px;
   width: 21px;
   height: 21px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #eef3e6;
-  color: #8a9e7a;
+  background: #edf0df;
+  color: #566950;
   border-radius: 4px;
   flex-shrink: 0;
 }
 .selected .option-letter {
-  background: #dae9cc;
-  color: #60814f;
+  background: #edf0df;
+  color: #214b36;
 }
 .practice-question .field input {
-  font-size: 12px;
+  font-size: 14px;
 }
 .question-feedback {
   padding: 12px 15px;
-  background: #f5f9ee;
-  border: 1px solid #e0ecd1;
+  background: #fffdf6;
+  border: 1px solid #d8c8ac;
   border-radius: 7px;
   margin-top: 13px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.8;
-  color: #739065;
+  color: #214b36;
 }
 .practice-question.incorrect .question-feedback {
-  background: #fdf6ee;
-  border-color: #efe2ce;
-  color: #9f8661;
+  background: #fff0dc;
+  border-color: #d8c8ac;
+  color: #a8432e;
 }
 .question-feedback p {
   margin: 6px 0;
 }
 .question-feedback blockquote {
   padding: 8px 11px;
-  border-left: 2px solid #b5c8a4;
+  border-left: 2px solid #d8c8ac;
   margin: 8px 0 0;
   font-style: italic;
   background: #ffffff70;
@@ -622,14 +664,14 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  background: #fafcf6;
+  background: #fffdf6;
   padding: 23px 25px !important;
 }
 .listening-symbol {
   display: flex;
   gap: 12px;
   align-items: center;
-  color: #849bba;
+  color: #566950;
   flex-shrink: 0;
 }
 .listening-player > div:nth-child(2) {
@@ -638,26 +680,26 @@
 }
 .listening-player h3 {
   font-size: 16px;
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   margin-bottom: 7px;
 }
 .listening-player p {
-  font-size: 11px;
-  color: #859a7e;
+  font-size: 13px;
+  color: #566950;
   margin-bottom: 5px;
 }
 .listening-player small {
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.7;
-  color: #9aa68d;
+  color: #566950;
   display: block;
 }
 .listening-player > .row {
   flex-shrink: 0;
 }
 .listening-player .button {
-  font-size: 10px;
+  font-size: 12px;
 }
 .audio-wave {
   display: flex;
@@ -670,7 +712,7 @@
   width: 3px;
   height: 12px;
   border-radius: 8px;
-  background: #c2d1da;
+  background: #edf0df;
 }
 .audio-wave i:nth-child(3n) {
   height: 27px;
@@ -684,23 +726,23 @@
 .transcript-lock {
   text-align: center;
   padding: 38px 10px;
-  color: #a0b496;
+  color: #566950;
   display: flex;
   align-items: center;
   flex-direction: column;
 }
 .transcript-lock h3 {
   font-size: 19px;
-  color: #77956a;
-  font-family: Georgia, serif;
-  font-weight: 400;
+  color: #566950;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   margin: 18px 0 10px;
 }
 .transcript-lock p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
   max-width: 240px;
-  color: #96a38a;
+  color: #566950;
   margin: 0;
 }
 .listening-exam-split {
@@ -725,7 +767,7 @@
   margin-top: 10px;
 }
 .writing-prompt .section-heading > span {
-  font-size: 9px !important;
+  font-size: 12px !important;
   max-width: 125px;
   line-height: 1.8;
   text-align: right;
@@ -735,40 +777,40 @@
   line-height: 1.95;
 }
 .writing-prompt .badge {
-  font-size: 9px;
+  font-size: 12px;
 }
 .writing-editor textarea {
   width: 100%;
   resize: vertical;
   min-height: 360px;
   line-height: 1.95;
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 15px;
-  color: #435f3c;
-  background: #fdfefb;
+  color: #214b36;
+  background: #fffdf6;
   padding: 18px 20px;
   outline-offset: 2px;
 }
 .writing-editor .notice {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
   margin-top: 18px;
 }
 .word-counter {
-  font-size: 10px;
-  color: #a89570;
+  font-size: 12px;
+  color: #a8432e;
   white-space: nowrap;
 }
 .word-counter.complete {
-  color: #79a263;
+  color: #566950;
 }
 .editor-footer {
   display: flex;
   justify-content: space-between;
   gap: 13px;
   margin-top: 13px;
-  font-size: 8px;
-  color: #9caa90;
+  font-size: 12px;
+  color: #566950;
   line-height: 1.7;
 }
 .editor-footer > span {
@@ -781,9 +823,9 @@
 }
 .task-chart {
   margin: 22px 0;
-  background: #f9fbf5;
+  background: #fffdf6;
   padding: 10px;
-  border: 1px solid #e5edda;
+  border: 1px solid #d8c8ac;
   border-radius: 7px;
 }
 .task-chart svg {
@@ -793,14 +835,14 @@
 }
 .task-chart figcaption {
   text-align: center;
-  font-size: 8px;
-  color: #9aaa8d;
+  font-size: 12px;
+  color: #566950;
   line-height: 1.8;
 }
 .submit-bar {
   padding: 24px 27px;
-  border: 1px solid #dce6d3;
-  background: #edf3e6;
+  border: 1px solid #d8c8ac;
+  background: #edf0df;
   border-radius: 11px;
   display: flex;
   align-items: center;
@@ -808,21 +850,21 @@
   gap: 25px;
 }
 .submit-bar strong {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 19px;
-  color: #5f8050;
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  color: #214b36;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 .submit-bar p {
-  font-size: 11px;
-  color: #8b9d7c;
+  font-size: 13px;
+  color: #566950;
   margin: 8px 0 0;
   line-height: 1.8;
 }
 .submit-bar .button {
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 13px;
 }
 .speaking-workspace {
   display: grid;
@@ -832,8 +874,8 @@
 }
 .speaking-prompt h2 {
   font-size: 25px;
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   line-height: 1.4;
   margin: 14px 0 22px;
 }
@@ -842,11 +884,11 @@
 }
 .cue-points {
   padding: 17px 20px 17px 34px;
-  background: #f4f8ed;
+  background: #fffdf6;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 2;
-  color: #7f976d;
+  color: #566950;
   margin: 20px 0;
 }
 .recording-card {
@@ -856,48 +898,48 @@
 .recording-orb {
   width: 90px;
   height: 90px;
-  background: #eee8f3;
-  border: 1px solid #ddd0e7;
+  background: #fffdf6;
+  border: 1px solid #d8c8ac;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9b82ac;
+  color: #566950;
   margin: 0 auto 25px;
   box-shadow: 0 0 0 10px #f8f5fa;
 }
 .recording-orb.recording {
-  color: #b36f6a;
-  background: #f7e7e4;
-  border-color: #e8bbb1;
+  color: #a8432e;
+  background: #fff0dc;
+  border-color: #d8c8ac;
   animation: record-pulse 1.6s ease-in-out infinite;
 }
 .recording-card h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 23px;
-  font-weight: 400;
+  font-weight: 700;
 }
 .recording-card > .muted {
-  font-size: 11px;
+  font-size: 13px;
 }
 .recording-actions {
   justify-content: center;
   margin: 23px 0;
 }
 .recording-actions .button {
-  font-size: 11px;
+  font-size: 13px;
 }
 .recording-playback {
   text-align: left;
   margin: 23px 0;
   padding: 15px;
-  background: #f7f9f2;
-  border: 1px solid #e4ebdc;
+  background: #fffdf6;
+  border: 1px solid #d8c8ac;
   border-radius: 8px;
 }
 .recording-playback label {
-  font-size: 10px;
-  color: #8b9d7d;
+  font-size: 12px;
+  color: #566950;
   display: block;
   margin-bottom: 11px;
 }
@@ -909,23 +951,23 @@
 .transcript-field {
   text-align: left;
   margin-top: 28px;
-  font-size: 11px !important;
+  font-size: 13px !important;
 }
 .transcript-field textarea {
   resize: vertical;
   width: 100%;
   line-height: 1.9;
-  font-size: 12px;
+  font-size: 14px;
   padding: 15px;
 }
 .transcript-field small {
-  font-size: 9px;
-  color: #9aa990;
+  font-size: 12px;
+  color: #566950;
   line-height: 1.8;
 }
 .recording-card > .notice {
   text-align: left;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.9;
   margin-top: 20px;
 }
@@ -936,61 +978,61 @@
   margin-bottom: 0;
 }
 .feedback-section > .section-heading h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 27px;
-  font-weight: 400;
+  font-weight: 700;
 }
 .feedback-summary {
   display: flex;
   gap: 30px;
   align-items: center;
-  background: #f9fcf4 !important;
+  background: #fffdf6 !important;
   padding: 25px 28px !important;
 }
 .feedback-score {
-  border-right: 1px solid #dce7d0;
+  border-right: 1px solid #d8c8ac;
   min-width: 140px;
   padding-right: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 9px;
-  color: #8ea679;
+  color: #566950;
   text-align: center;
 }
 .feedback-score > strong {
   font-size: 45px;
-  letter-spacing: -0.07em;
-  font-family: "Manrope", Arial, sans-serif;
+  letter-spacing: 0;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   line-height: 1;
-  color: #638b4d;
+  color: #214b36;
   font-weight: 600;
 }
 .feedback-score > strong small {
   font-size: 22px;
-  color: #a1b48e;
+  color: #566950;
   margin-left: 3px;
 }
 .feedback-score > span {
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.7;
 }
 .feedback-summary h3 {
   font-size: 21px;
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   margin-bottom: 12px;
 }
 .feedback-summary p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.95;
-  color: #7e956d;
+  color: #566950;
   margin-bottom: 13px;
 }
 .feedback-summary small {
-  font-size: 9px;
+  font-size: 12px;
   line-height: 1.8;
-  color: #a0ad92;
+  color: #566950;
 }
 .criteria-grid {
   display: grid;
@@ -1007,44 +1049,44 @@
   align-items: start;
 }
 .criterion-heading h3 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 18px;
   line-height: 1.4;
-  font-weight: 400;
+  font-weight: 700;
 }
 .criterion-heading strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 24px;
-  color: #90a379;
+  color: #566950;
   font-weight: 600;
 }
 .criteria-grid p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #809673;
+  color: #566950;
   margin: 10px 0 0;
 }
 .criteria-grid small {
-  font-size: 9px;
-  color: #a3b095;
+  font-size: 12px;
+  color: #566950;
   display: block;
   margin-top: 13px;
 }
 .feedback-section blockquote {
   padding: 12px 16px;
-  background: #f5f8ef;
-  border-left: 2px solid #bdd2a7;
+  background: #fffdf6;
+  border-left: 2px solid #d8c8ac;
   margin: 15px 0 0;
-  color: #889f74;
-  font-size: 11px;
+  color: #566950;
+  font-size: 13px;
   font-style: italic;
   line-height: 1.8;
   white-space: pre-wrap;
 }
 .feedback-section > .card > h3 {
   font-size: 21px;
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   margin-bottom: 20px;
 }
 .correction-list {
@@ -1054,28 +1096,28 @@
 }
 .correction-list > div {
   padding: 18px;
-  border: 1px solid #e4ebda;
+  border: 1px solid #d8c8ac;
   border-radius: 8px;
-  background: #fcfdf9;
+  background: #fffdf6;
 }
 .correction-list .eyebrow {
-  font-size: 8px;
+  font-size: 12px;
 }
 .correction-original {
-  font-size: 12px;
-  color: #a77867;
+  font-size: 14px;
+  color: #a8432e;
   line-height: 1.8;
   margin: 8px 0;
 }
 .correction-suggestion {
-  font-size: 12px;
-  color: #729353;
+  font-size: 14px;
+  color: #214b36;
   line-height: 1.8;
   margin: 8px 0;
 }
 .correction-list > div > p {
-  font-size: 11px;
-  color: #94a485;
+  font-size: 13px;
+  color: #566950;
   line-height: 1.9;
   margin: 10px 0 0;
 }
@@ -1086,24 +1128,24 @@
 }
 .paragraph-feedback > div {
   padding: 15px 18px;
-  background: #fafcf5;
-  border: 1px solid #e5eed9;
+  background: #fffdf6;
+  border: 1px solid #d8c8ac;
   border-radius: 8px;
 }
 .paragraph-feedback .badge {
-  font-size: 9px;
+  font-size: 12px;
 }
 .paragraph-feedback p {
-  font-size: 12px;
-  color: #849a72;
+  font-size: 14px;
+  color: #566950;
   line-height: 1.9;
   margin: 10px 0 0;
 }
 .feedback-transcript {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 14px;
   line-height: 2;
-  color: #739162;
+  color: #214b36;
   white-space: pre-wrap;
 }
 .acoustic-grid {
@@ -1114,24 +1156,24 @@
 }
 .acoustic-grid > div {
   padding: 15px;
-  background: #f4f8ed;
+  background: #fffdf6;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 .acoustic-grid strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 23px;
-  color: #7f9f64;
+  color: #566950;
 }
 .acoustic-grid small {
-  font-size: 11px;
-  color: #adc096;
+  font-size: 13px;
+  color: #566950;
 }
 .acoustic-grid span {
-  font-size: 10px;
-  color: #9aaf88;
+  font-size: 12px;
+  color: #566950;
 }
 .answer-review {
   display: flex;
@@ -1139,7 +1181,7 @@
   gap: 8px;
 }
 .answer-review details {
-  border: 1px solid #e1e9d5;
+  border: 1px solid #d8c8ac;
   border-radius: 7px;
   overflow: hidden;
 }
@@ -1149,18 +1191,18 @@
   gap: 10px;
   cursor: pointer;
   padding: 12px 15px;
-  font-size: 11px;
-  color: #879d74;
+  font-size: 13px;
+  color: #566950;
   line-height: 1.8;
   list-style: none;
 }
 .answer-review summary > span:nth-child(3) {
   flex: 1;
-  color: #697f5a;
+  color: #214b36;
   overflow-wrap: anywhere;
 }
 .answer-review summary .badge {
-  font-size: 8px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .answer-result-icon {
@@ -1170,19 +1212,19 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #e5f1d8;
-  color: #87a86a;
+  background: #edf0df;
+  color: #566950;
   flex-shrink: 0;
 }
 .answer-result-icon.incorrect {
-  background: #f7e9d9;
-  color: #bd976a;
+  background: #fff0dc;
+  color: #a8432e;
 }
 .answer-review details > div {
   padding: 0 18px 15px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #81966d;
+  color: #566950;
 }
 .answer-review details > div p {
   margin: 8px 0;
@@ -1193,29 +1235,29 @@
   gap: 17px;
 }
 .lesson-word-grid > div {
-  border: 1px solid #e2e9d8;
+  border: 1px solid #d8c8ac;
   padding: 16px;
   border-radius: 8px;
 }
 .lesson-word-grid strong {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 18px;
-  color: #6e8c58;
+  color: #214b36;
   display: block;
   margin-bottom: 5px;
 }
 .lesson-word-grid span {
-  font-size: 9px;
-  color: #adbb9e;
+  font-size: 12px;
+  color: #566950;
 }
 .lesson-word-grid p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.8;
-  color: #8da079;
+  color: #566950;
   margin: 11px 0 15px;
 }
 .lesson-word-grid .button {
-  font-size: 9px;
+  font-size: 12px;
   padding: 7px 10px;
   min-height: 31px;
 }
@@ -1225,40 +1267,43 @@
   gap: 40px;
   padding: 25px 30px;
   align-items: center;
-  background: #f1f6e9;
-  border: 1px solid #e0e9d4;
-  border-radius: 14px;
+  background: radial-gradient(ellipse at 0 100%, #e7eaca, transparent 65%), #f8ead1;
+  border: 2px solid #cfb892;
+  border-radius: 20px;
+  box-shadow: 0 5px 0 #decaab;
 }
 .placement-hero h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 31px;
   line-height: 1.4;
-  font-weight: 400;
-  color: #597847;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  color: #214b36;
+  letter-spacing: 0;
   margin: 10px 0 18px;
 }
 .placement-hero h2 em {
-  font-weight: 400;
-  color: #8aa673;
+  font-weight: 700;
+  color: #566950;
 }
 .placement-hero > div > p:not(.eyebrow) {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #95a587;
+  color: #566950;
 }
 .placement-hero .notice {
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
   background: #ffffff80;
-  color: #97a985;
-  border-color: #e0ebd2;
+  color: #566950;
+  border-color: #d8c8ac;
 }
 .placement-orbit {
   width: 225px;
   height: 225px;
-  border: 1px solid #c8d8b4;
-  border-radius: 50%;
+  border: 3px solid #b19765;
+  border-radius: 35px;
+  background: #edf0d6;
+  box-shadow: 0 7px 0 #9b8055, inset 0 0 0 7px #faf2d5;
   position: relative;
   margin: 20px auto;
   display: flex;
@@ -1269,17 +1314,19 @@
   content: "";
   position: absolute;
   inset: 25px;
-  border: 1px dashed #d0ddbd;
-  border-radius: 50%;
+  border: 2px dashed #a8b77d;
+  border-radius: 22px;
 }
 .placement-orbit > span {
   position: absolute;
-  background: #fcfef5;
-  border: 1px solid #cfdeb9;
+  background: #fffdf6;
+  border: 2px solid #9b8055;
   border-radius: 10px;
   padding: 9px 11px;
-  font-size: 12px;
-  color: #8aa56f;
+  font-size: 14px;
+  color: #405d39;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #bdab7c;
 }
 .placement-orbit > span:nth-child(1) {
   top: 7px;
@@ -1306,41 +1353,47 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  color: #93b074;
+  color: #a7442d;
 }
 .placement-orbit strong {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 15px;
-  font-weight: 400;
-  font-style: italic;
+  font-weight: 700;
+  font-style: normal;
+  max-width: 130px;
+  text-align: center;
 }
 .placement-options .card {
   padding: 30px;
+  border-top: 5px solid #a8432e;
+}
+.placement-options .card:nth-child(2) {
+  border-top-color: #3f6541;
 }
 .placement-options h2 {
-  font-family: Georgia, serif;
-  font-weight: 400;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
+  font-weight: 700;
   font-size: 27px;
   margin: 18px 0 12px;
-  color: #688652;
+  color: #214b36;
 }
 .placement-options p {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #92a381;
+  color: #566950;
 }
 .placement-options ul {
   padding-left: 18px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 2.2;
-  color: #9aab89;
+  color: #566950;
   margin: 18px 0 23px;
 }
 .placement-options .button {
-  font-size: 11px;
+  font-size: 13px;
 }
 .placement-options .badge {
-  font-size: 8px;
+  font-size: 12px;
   letter-spacing: 0.05em;
 }
 .placement-question {
@@ -1353,16 +1406,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
-  color: #8ca075;
+  font-size: 13px;
+  color: #566950;
   margin-bottom: 12px;
 }
 .placement-progress .badge {
-  font-size: 9px;
+  font-size: 12px;
 }
 .progress-track {
   height: 5px;
-  background: #ebf2e0;
+  background: #edf0df;
   border-radius: 5px;
   overflow: hidden;
   margin-bottom: 24px;
@@ -1370,7 +1423,7 @@
 .progress-track span {
   display: block;
   height: 100%;
-  background: #9dbd7b;
+  background: #527445;
   border-radius: 5px;
   transition: width 0.3s;
 }
@@ -1378,22 +1431,22 @@
   margin-bottom: 18px;
 }
 .placement-passage {
-  background: #f9fcf3;
-  border: 1px solid #e5eed6;
+  background: #fffdf6;
+  border: 1px solid #d8c8ac;
   padding: 22px 25px;
   border-radius: 9px;
   font-size: 15px;
 }
 .placement-question > h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 23px;
   line-height: 1.5;
-  font-weight: 400;
-  color: #6b8754;
+  font-weight: 700;
+  color: #214b36;
   margin: 25px 0 18px;
 }
 .placement-question > .answer-options .answer-option {
-  font-size: 12px;
+  font-size: 14px;
   padding: 13px 17px;
 }
 .placement-footer {
@@ -1404,54 +1457,54 @@
   margin-top: 27px;
 }
 .placement-footer .button {
-  font-size: 11px;
+  font-size: 13px;
 }
 .placement-listening {
-  border: 1px solid #e1e9d7;
-  background: #f6f9f0;
+  border: 1px solid #d8c8ac;
+  background: #fffdf6;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 25px;
   gap: 12px;
   border-radius: 9px;
-  color: #879fc1;
+  color: #566950;
 }
 .placement-listening p {
   font-size: 13px;
-  color: #8ba279;
+  color: #566950;
   margin: 0;
 }
 .placement-listening small {
-  font-size: 9px;
-  color: #a1b18c;
+  font-size: 12px;
+  color: #566950;
 }
 .placement-listening .button {
-  font-size: 11px;
+  font-size: 13px;
 }
 .placement-complete {
-  background: #f5f9ed !important;
+  background: #fffdf6 !important;
   padding: 35px !important;
-  color: #91af77;
+  color: #566950;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 }
 .placement-complete > .eyebrow {
-  font-size: 9px;
+  font-size: 12px;
   margin: 21px 0 12px;
 }
 .placement-complete h2 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", Arial, sans-serif;
   font-size: 33px;
-  font-weight: 400;
-  color: #789854;
+  font-weight: 700;
+  color: #214b36;
 }
 .placement-complete > p:not(.eyebrow) {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.9;
-  color: #9bad87;
+  color: #566950;
   max-width: 600px;
 }
 .placement-complete > .row {
@@ -1459,7 +1512,7 @@
   margin-top: 15px;
 }
 .placement-complete .button {
-  font-size: 11px;
+  font-size: 13px;
 }
 .sr-only {
   position: absolute;
@@ -1522,10 +1575,10 @@
     height: 185px;
   }
   .placement-orbit > span {
-    font-size: 10px;
+    font-size: 12px;
   }
   .placement-orbit strong {
-    font-size: 12px;
+    font-size: 14px;
   }
   .listening-player {
     flex-wrap: wrap;
@@ -1577,14 +1630,10 @@
   .library-intro {
     padding: 24px;
   }
-  .library-intro-mark {
-    width: 95px;
-    height: 95px;
-    margin-left: 20px;
-  }
-  .library-intro-mark svg {
-    width: 45px;
-    height: 45px;
+  .campaign-intro-art {
+    flex-basis: 34%;
+    width: 34%;
+    max-width: 260px;
   }
   .library-intro h2 {
     font-size: 25px;
@@ -1613,7 +1662,7 @@
     font-size: 16px;
   }
   .criteria-grid p {
-    font-size: 11px;
+    font-size: 13px;
   }
   .listening-exam-split .passage-card {
     display: none;
@@ -1642,7 +1691,7 @@
   }
   .learning-skill-tabs button {
     padding: 9px 11px;
-    font-size: 10px;
+    font-size: 12px;
     gap: 5px;
   }
   .learning-skill-tabs button svg {
@@ -1650,15 +1699,22 @@
   }
   .library-intro {
     padding: 23px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
   }
-  .library-intro-mark {
-    display: none;
+  .campaign-intro-art {
+    flex: none;
+    width: 230px;
+    max-width: 100%;
+    align-self: center;
+    margin: -5px 0 -30px;
   }
   .library-intro h2 {
     font-size: 26px;
   }
   .library-intro p {
-    font-size: 11px;
+    font-size: 13px;
   }
   .content-grid {
     gap: 13px;
@@ -1675,7 +1731,7 @@
     font-size: 13px;
   }
   .content-art-number {
-    font-size: 8px;
+    font-size: 12px;
     left: 12px;
     top: 11px;
   }
@@ -1683,7 +1739,7 @@
     padding: 15px;
   }
   .content-card .badge {
-    font-size: 7px;
+    font-size: 11px;
     padding: 2px 5px;
   }
   .content-card h3 {
@@ -1691,16 +1747,16 @@
     margin-top: 11px;
   }
   .content-card p {
-    font-size: 10px;
+    font-size: 12px;
     margin-bottom: 15px;
   }
   .content-card-meta {
-    font-size: 8px;
+    font-size: 12px;
     gap: 8px;
     margin-bottom: 13px;
   }
   .content-card .button {
-    font-size: 9px;
+    font-size: 12px;
     padding: 8px 11px;
   }
   .learning-filters select {
@@ -1709,10 +1765,10 @@
     max-width: none;
   }
   .learning-filters .button {
-    font-size: 10px;
+    font-size: 12px;
   }
   .learning-disclaimer {
-    font-size: 9px;
+    font-size: 12px;
   }
   .exam-format-grid {
     gap: 12px;
@@ -1721,19 +1777,19 @@
     padding: 16px;
   }
   .exam-format-grid strong {
-    font-size: 12px;
+    font-size: 14px;
   }
   .exam-format-grid span {
-    font-size: 8px;
+    font-size: 12px;
   }
   .resume-panel {
     padding: 19px 21px !important;
   }
   .resume-item strong {
-    font-size: 12px;
+    font-size: 14px;
   }
   .resume-item small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .attempt-toolbar {
     padding: 13px 15px;
@@ -1741,10 +1797,10 @@
   }
   .attempt-toolbar > .row {
     gap: 8px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .attempt-toolbar .badge {
-    font-size: 8px;
+    font-size: 12px;
   }
   .attempt-status {
     gap: 15px;
@@ -1753,7 +1809,7 @@
     margin: 0;
   }
   .draft-status {
-    font-size: 9px;
+    font-size: 12px;
   }
   .attempt-timer {
     font-size: 17px;
@@ -1766,20 +1822,20 @@
   }
   .learning-page .page-header p:last-child {
     line-height: 1.9;
-    font-size: 11px;
+    font-size: 13px;
   }
   .section-tabs {
     gap: 7px;
   }
   .section-tabs button {
     padding: 10px 12px;
-    font-size: 10px;
+    font-size: 12px;
     min-width: 100px;
     max-width: none;
     flex-basis: calc(50% - 7px);
   }
   .section-tabs button span {
-    font-size: 8px;
+    font-size: 12px;
   }
   .passage-card h2,
   .questions-card h2 {
@@ -1800,16 +1856,16 @@
     line-height: 1.85;
   }
   .answer-option {
-    font-size: 12px;
+    font-size: 14px;
     min-height: 45px;
     padding: 11px 13px;
     line-height: 1.7;
   }
   .question-limit {
-    font-size: 10px;
+    font-size: 12px;
   }
   .question-feedback {
-    font-size: 11px;
+    font-size: 13px;
   }
   .practice-question .field input {
     font-size: 13px;
@@ -1825,10 +1881,10 @@
     font-size: 18px;
   }
   .listening-player p {
-    font-size: 10px;
+    font-size: 12px;
   }
   .listening-player small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .listening-player > .row {
     width: 100%;
@@ -1836,14 +1892,14 @@
     justify-content: flex-end;
   }
   .listening-player .button {
-    font-size: 10px;
+    font-size: 12px;
   }
   .writing-prompt .reading-passage {
     font-size: 15px;
   }
   .writing-prompt .section-heading > span {
     max-width: 105px;
-    font-size: 8px !important;
+    font-size: 12px !important;
   }
   .writing-prompt .section-heading h2 {
     font-size: 22px;
@@ -1854,17 +1910,17 @@
     padding: 15px;
   }
   .word-counter {
-    font-size: 9px;
+    font-size: 12px;
   }
   .editor-footer {
-    font-size: 8px;
+    font-size: 12px;
     gap: 10px;
   }
   .editor-footer > span:last-child {
     display: none;
   }
   .writing-editor .notice {
-    font-size: 10px;
+    font-size: 12px;
   }
   .submit-bar {
     flex-direction: column;
@@ -1876,7 +1932,7 @@
     font-size: 21px;
   }
   .submit-bar p {
-    font-size: 11px;
+    font-size: 13px;
   }
   .submit-bar .button {
     width: 100%;
@@ -1889,7 +1945,7 @@
     font-size: 15px;
   }
   .cue-points {
-    font-size: 12px;
+    font-size: 14px;
     line-height: 2.1;
   }
   .recording-card {
@@ -1899,7 +1955,7 @@
     font-size: 23px;
   }
   .recording-card > .muted {
-    font-size: 10px;
+    font-size: 12px;
   }
   .recording-orb {
     width: 78px;
@@ -1911,17 +1967,17 @@
     line-height: 1.95;
   }
   .transcript-field small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .recording-card > .notice {
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1.9;
   }
   .feedback-section > .section-heading h2 {
     font-size: 25px;
   }
   .feedback-section > .section-heading .badge {
-    font-size: 8px;
+    font-size: 12px;
     max-width: 140px;
     text-align: center;
     line-height: 1.6;
@@ -1934,7 +1990,7 @@
   }
   .feedback-score {
     border-right: 0;
-    border-bottom: 1px solid #dce7d0;
+    border-bottom: 1px solid #d8c8ac;
     padding: 0 0 20px;
     width: 100%;
     flex-direction: row;
@@ -1947,16 +2003,16 @@
     font-size: 39px;
   }
   .feedback-score > span {
-    font-size: 10px;
+    font-size: 12px;
   }
   .feedback-summary h3 {
     font-size: 22px;
   }
   .feedback-summary p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .feedback-summary small {
-    font-size: 9px;
+    font-size: 12px;
   }
   .criteria-grid {
     grid-template-columns: 1fr;
@@ -1968,7 +2024,7 @@
     font-size: 19px;
   }
   .criteria-grid p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .correction-list > div {
     padding: 15px;
@@ -1979,10 +2035,10 @@
   }
   .correction-original,
   .correction-suggestion {
-    font-size: 12px;
+    font-size: 14px;
   }
   .correction-list > div > p {
-    font-size: 11px;
+    font-size: 13px;
   }
   .feedback-section > .card > h3 {
     font-size: 21px;
@@ -1995,13 +2051,13 @@
     flex-wrap: wrap;
     gap: 8px;
     padding: 12px;
-    font-size: 11px;
+    font-size: 13px;
   }
   .answer-review summary .badge {
     margin-left: 32px;
   }
   .answer-review details > div {
-    font-size: 12px;
+    font-size: 14px;
     padding-left: 15px;
     padding-right: 15px;
   }
@@ -2015,10 +2071,10 @@
     font-size: 18px;
   }
   .lesson-word-grid p {
-    font-size: 11px;
+    font-size: 13px;
   }
   .lesson-word-grid .button {
-    font-size: 8px;
+    font-size: 12px;
   }
   .placement-hero {
     padding: 23px;
@@ -2027,10 +2083,10 @@
     font-size: 30px;
   }
   .placement-hero > div > p:not(.eyebrow) {
-    font-size: 12px;
+    font-size: 14px;
   }
   .placement-hero .notice {
-    font-size: 10px;
+    font-size: 12px;
   }
   .placement-options {
     gap: 16px;
@@ -2042,16 +2098,16 @@
     font-size: 28px;
   }
   .placement-options p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .placement-options ul {
-    font-size: 11px;
+    font-size: 13px;
   }
   .placement-question {
     padding: 24px !important;
   }
   .placement-progress {
-    font-size: 10px;
+    font-size: 12px;
   }
   .placement-question > h2 {
     font-size: 23px;
@@ -2063,7 +2119,7 @@
     line-height: 1.95;
   }
   .placement-question > .answer-options .answer-option {
-    font-size: 12px;
+    font-size: 14px;
     padding: 12px 14px;
   }
   .placement-footer {
@@ -2082,19 +2138,19 @@
     font-size: 29px;
   }
   .placement-complete > p:not(.eyebrow) {
-    font-size: 11px;
+    font-size: 13px;
   }
   .placement-complete .button {
-    font-size: 10px;
+    font-size: 12px;
   }
   .placement-listening {
     padding: 23px 18px;
   }
   .placement-listening p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .placement-listening small {
-    font-size: 8px;
+    font-size: 12px;
   }
 }
 @media (max-width: 480px) {
@@ -2118,26 +2174,26 @@
     font-size: 22px;
   }
   .content-card p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .content-card .badge {
-    font-size: 8px;
+    font-size: 12px;
   }
   .content-card-meta {
-    font-size: 10px;
+    font-size: 12px;
     gap: 12px;
     margin-bottom: 17px;
   }
   .content-card .button {
-    font-size: 11px;
+    font-size: 13px;
     min-height: 42px;
   }
   .learning-skill-tabs button {
-    font-size: 10px;
+    font-size: 12px;
     padding: 8px 10px;
   }
   .learning-skill-tabs button svg {
-    display: none;
+    display: block;
   }
   .lesson-word-grid {
     grid-template-columns: 1fr;
@@ -2146,13 +2202,13 @@
     font-size: 20px;
   }
   .lesson-word-grid p {
-    font-size: 12px;
+    font-size: 14px;
   }
   .lesson-word-grid .button {
-    font-size: 10px;
+    font-size: 12px;
   }
   .attempt-toolbar > .row > span:last-child {
-    font-size: 9px;
+    font-size: 12px;
   }
   .acoustic-grid {
     gap: 11px;
@@ -2169,6 +2225,11 @@
   .placement-question .section-heading {
     flex-wrap: wrap;
     gap: 10px;
+  }
+  .practice-question .field input,
+  .writing-editor textarea,
+  .transcript-field textarea {
+    font-size: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

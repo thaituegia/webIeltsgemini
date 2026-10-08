@@ -1,20 +1,20 @@
 :root {
-  font-family: "DM Sans", Arial, sans-serif;
-  color: #203c40;
-  background: #f6f7f2;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  color: #263c2b;
+  background: #f7f1e5;
   font-synthesis: none;
   font-weight: 400;
   font-size: 15px;
   line-height: 1.6;
-  --navy: #112c36;
-  --teal: #087d72;
-  --teal-dark: #06655e;
-  --cream: #f6f7f2;
-  --muted: #72827f;
-  --border: #e4e9e3;
-  --peach: #ecc5ad;
+  --navy: #193e2d;
+  --teal: #b9472d;
+  --teal-dark: #963822;
+  --cream: #f7f1e5;
+  --muted: #66715b;
+  --border: #ded6c0;
+  --peach: #edb588;
   --white: #fff;
-  --shadow: 0 6px 22px #233d3505;
+  --shadow: 0 6px 22px #463b2110;
 }
 * {
   box-sizing: border-box;
@@ -63,9 +63,9 @@ h1,
 h2,
 h3,
 h4 {
-  font-family: "Manrope", "DM Sans", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   line-height: 1.3;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 h1 {
   font-size: 32px;
@@ -84,7 +84,7 @@ h3 {
 }
 h4 {
   font-size: 15px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin-bottom: 10px;
 }
 p {
@@ -92,18 +92,18 @@ p {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 3px solid #5abbaa;
+  outline: 3px solid #b9472d;
   outline-offset: 4px;
 }
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 3px solid #bfe2d9;
+  outline: 3px solid #edd5ad;
   outline-offset: 1px;
   border-color: var(--teal);
 }
 ::selection {
-  background: #c4e5d9;
+  background: #efd6ac;
   color: #123a36;
 }
 .button {
@@ -473,12 +473,12 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  font-family: "Manrope", Arial, sans-serif;
-  color: #f3f3e9;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  color: #fff5db;
   font-size: 24px;
   font-weight: 750;
   line-height: 1.25;
-  letter-spacing: -0.07em;
+  letter-spacing: 0;
 }
 .brand-mark {
   width: 38px;
@@ -487,18 +487,18 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #436458;
-  color: #d1e4cd;
+  background: #365a38;
+  color: #ffe0a6;
 }
 .brand-ai {
-  color: #b5d2bc;
+  color: #f1bb64;
 }
 .brand small {
   display: block;
   font-size: 7px;
   letter-spacing: 0.22em;
   font-weight: 500;
-  color: #97b2a4;
+  color: #c7d1b9;
   margin-top: 5px;
 }
 .app-layout {
@@ -524,7 +524,7 @@ textarea {
 .sidebar-caption {
   font-size: 8px;
   letter-spacing: 0.14em;
-  color: #637f79;
+  color: #b4c0a0;
   margin: 34px 0 16px 11px;
 }
 .sidebar nav {
@@ -540,21 +540,21 @@ textarea {
   min-height: 42px;
   font-size: 12px;
   border-radius: 8px;
-  color: #91aaa2;
+  color: #c7d1b9;
   transition:
     background 0.15s,
     color 0.15s;
 }
 .nav-item.active {
   color: #edf7e8;
-  background: #244742;
+  background: #b9472d;
 }
 .nav-item.active svg {
   color: #b4d5bb;
 }
 .nav-item:hover {
   color: #e9f2e8;
-  background: #1d3a3d;
+  background: #315738;
 }
 .nav-dot {
   width: 5px;
@@ -564,8 +564,8 @@ textarea {
   margin-left: auto;
 }
 .sidebar-goal {
-  background: #1d3b3b;
-  border: 1px solid #34534c;
+  background: #284f32;
+  border: 1px solid #68734c;
   border-radius: 10px;
   padding: 14px 15px;
   margin: 26px 8px 23px;
@@ -583,9 +583,9 @@ textarea {
   margin-bottom: 6px;
 }
 .sidebar-goal strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 23px;
-  letter-spacing: -0.05em;
+  letter-spacing: 0;
   color: #e4eddb;
 }
 .sidebar-goal a {
@@ -601,7 +601,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 9px;
-  border-top: 1px solid #355048;
+  border-top: 1px solid #557049;
   padding-top: 18px;
   min-width: 0;
 }
@@ -639,10 +639,10 @@ textarea {
 .sidebar-user small {
   display: block;
   font-size: 9px;
-  color: #799a8d;
+  color: #b4c0a0;
 }
 .sidebar-user .icon-button:hover {
-  background: #2b4945;
+  background: #315738;
 }
 .main-content {
   margin-left: 239px;
@@ -650,14 +650,14 @@ textarea {
 }
 .topbar {
   height: 75px;
-  background: #f6f7f2;
+  background: #f7f1e5;
   border-bottom: 1px solid #e9ece4;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 42px;
   font-size: 11px;
-  color: #8a968b;
+  color: #68715d;
 }
 .topbar-note {
   display: flex;
@@ -686,7 +686,7 @@ textarea {
 .site-footer {
   border-top: 1px solid var(--border);
   font-size: 10px;
-  color: #8a988b;
+  color: #66715b;
   padding: 20px 42px;
   display: flex;
   gap: 20px;
@@ -699,7 +699,7 @@ textarea {
 .dashboard-hero {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  background: #123e3c;
+  background: #214b36;
   color: #e6efe1;
   border-radius: 15px;
   overflow: hidden;
@@ -712,11 +712,11 @@ textarea {
   z-index: 1;
 }
 .hero-copy h2 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-weight: 400;
   font-size: 37px;
   line-height: 1.2;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   margin: 18px 0 15px;
 }
 .hero-copy h2 em {
@@ -726,7 +726,7 @@ textarea {
 .hero-copy p {
   font-size: 12px;
   line-height: 1.8;
-  color: #a2bbb0;
+  color: #d7dfc5;
   max-width: 390px;
   margin-bottom: 21px;
 }
@@ -741,7 +741,7 @@ textarea {
   align-items: center;
   gap: 7px;
   font-size: 9px;
-  color: #86ab99;
+  color: #c7d1b9;
   margin-top: 12px;
 }
 .hero-art {
@@ -750,7 +750,7 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 28px 20px 22px;
-  background: radial-gradient(ellipse at center, #234f45 0%, #123e3c 68%);
+  background: radial-gradient(ellipse at center, #234f45 0%, #214b36 68%);
 }
 .hero-art .learning-illustration {
   width: 100%;
@@ -765,7 +765,7 @@ textarea {
   right: 40px;
   text-align: right;
   color: #94b0a1;
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 13px;
   font-style: italic;
   line-height: 1.6;
@@ -812,14 +812,14 @@ textarea {
   color: #70937b;
 }
 .stat-top strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 28px;
   line-height: 1;
   font-weight: 750;
-  letter-spacing: -0.07em;
+  letter-spacing: 0;
 }
 .stat-card h3 {
-  font-family: "DM Sans", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 11px;
   letter-spacing: 0;
   font-weight: 650;
@@ -828,7 +828,7 @@ textarea {
 .stat-card p {
   font-size: 9px;
   line-height: 1.6;
-  color: #96a095;
+  color: #66715b;
   margin-bottom: 0;
 }
 .skills-grid {
@@ -892,7 +892,7 @@ textarea {
 }
 .skill-card p {
   font-size: 9px;
-  color: #8a9689;
+  color: #66715b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -905,14 +905,14 @@ textarea {
   margin-bottom: 10px;
 }
 .skill-band strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 28px;
-  letter-spacing: -0.06em;
+  letter-spacing: 0;
   font-weight: 650;
 }
 .skill-band span {
   font-size: 8px;
-  color: #8c9a8c;
+  color: #66715b;
 }
 .skill-progress {
   height: 4px;
@@ -938,7 +938,7 @@ textarea {
 }
 .skill-card small {
   font-size: 8px;
-  color: #9aab9b;
+  color: #66715b;
 }
 .dashboard-lower {
   display: grid;
@@ -966,11 +966,11 @@ textarea {
   font-size: 12px;
   margin-top: 7px;
   line-height: 1.5;
-  letter-spacing: -0.015em;
+  letter-spacing: 0;
 }
 .recommendation p {
   font-size: 9px;
-  color: #919f90;
+  color: #66715b;
   margin: 4px 0 0;
 }
 .recommendation .badge {
@@ -1038,7 +1038,7 @@ textarea {
 .attempt-row h3 {
   font-size: 13px;
   margin: 8px 0 5px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 .attempt-row p {
   font-size: 10px;
@@ -1058,9 +1058,9 @@ textarea {
   min-width: 80px;
 }
 .attempt-result > strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 24px;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 .attempt-result > small {
   display: block;
@@ -1094,9 +1094,9 @@ textarea {
   padding-left: 30px;
 }
 .plan-progress strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 37px;
-  letter-spacing: -0.07em;
+  letter-spacing: 0;
 }
 .plan-progress strong span {
   font-size: 20px;
@@ -1259,8 +1259,8 @@ textarea {
   align-items: center;
 }
 .vocab-word {
-  font-family: "Manrope", Arial, sans-serif;
-  letter-spacing: -0.04em;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
+  letter-spacing: 0;
   font-size: 21px;
   font-weight: 650;
   text-align: left;
@@ -1536,12 +1536,12 @@ textarea {
   font-size: 9px;
 }
 .profile-level strong {
-  font-family: "Manrope", Arial, sans-serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   font-size: 27px;
 }
 .profile-level > span {
   font-size: 10px;
-  color: #91a082;
+  color: #66715b;
   margin-bottom: 10px;
 }
 .service-grid {
@@ -1562,7 +1562,7 @@ textarea {
 }
 .service-card p {
   font-size: 11px;
-  color: #8b9d80;
+  color: #66715b;
   margin: 7px 0 0;
 }
 .boot-screen {
@@ -1583,7 +1583,7 @@ textarea {
   grid-template-columns: 1fr 1fr;
 }
 .auth-story {
-  background: #143b3a;
+  background: #193e2d;
   color: #d7e6d0;
   padding: 40px 11%;
   display: flex;
@@ -1595,10 +1595,10 @@ textarea {
   padding-top: 65px;
 }
 .auth-story h1 {
-  font-family: Georgia, serif;
+  font-family: "Be Vietnam Pro", system-ui, sans-serif;
   line-height: 1.17;
   font-size: 48px;
-  letter-spacing: -0.045em;
+  letter-spacing: 0;
   font-weight: 400;
   margin: 28px 0 25px;
 }
@@ -1638,14 +1638,14 @@ textarea {
   gap: 8px;
   margin-top: auto;
   padding-top: 15px;
-  color: #7fa481;
+  color: #c7d1b9;
 }
 .auth-panel {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 50px 40px;
-  background: #f7f8f2;
+  background: #faf5e9;
 }
 .auth-box {
   max-width: 395px;
@@ -1684,11 +1684,11 @@ textarea {
   text-align: center;
   margin: 32px 0 24px;
   font-size: 10px;
-  color: #98a48d;
+  color: #66715b;
 }
 .auth-divider span {
   display: inline-block;
-  background: #f7f8f2;
+  background: #faf5e9;
   padding: 0 13px;
   position: relative;
   top: -9px;
@@ -1698,11 +1698,11 @@ textarea {
   text-align: center;
   line-height: 1.7;
   margin: 13px 4px;
-  color: #95a289;
+  color: #66715b;
 }
 .auth-bottom {
   font-size: 9px;
-  color: #92a189;
+  color: #66715b;
   display: flex;
   align-items: center;
   justify-content: center;

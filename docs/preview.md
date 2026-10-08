@@ -1,6 +1,24 @@
 # Giao diện website
 
-Ảnh chụp React website chạy với Node.js và MongoDB thực trong các lượt kiểm tra trình duyệt. Website đang phục vụ tại `https://sutonghanyu.vn`; bản Duo mới cần chạy updater riêng để thay phiên bản cũ trên VPS.
+Ảnh chụp React website chạy với Node.js và MongoDB thực trong các lượt kiểm tra trình duyệt. HTTPS công khai của `https://sutonghanyu.vn` đã xác nhận bản Duo và ngân hàng band 8.0; giao diện chiến dịch dưới đây cần chạy updater riêng để xuất hiện trên VPS.
+
+## Chiến dịch Hỏa + Mộc
+
+Minh họa hoạt hình, bản đồ quân cờ, các cổng thử thách và huy hiệu dùng tiến độ thật của hai người. Font Be Vietnam Pro được phục vụ cùng website. Các ảnh dùng tài khoản tổng hợp; bản đồ minh họa trạng thái sau khi cả hai hoàn thành năm buổi và đạt Gate đầu tiên trong cấu hình kiểm thử 10 buổi/band.
+
+| Màn hình | Ảnh |
+| --- | --- |
+| Tổng quan desktop | [Dashboard](screenshots/campaign-desktop-dashboard-viewport.png) |
+| Thư viện desktop | [Kho bài tập](screenshots/campaign-desktop-library-viewport.png) |
+| Thư viện mobile | [Font tiếng Việt trên điện thoại](screenshots/campaign-mobile-library-viewport.png) |
+| Bản đồ và lượt tiếp theo | [Bản đồ chiến dịch](screenshots/campaign-desktop-plan-first-gate-board.png) |
+| Huy hiệu mobile | [Các mốc đã mở và còn khóa](screenshots/campaign-mobile-plan-first-gate-rewards.png) |
+
+![Tổng quan chiến dịch](screenshots/campaign-desktop-dashboard-viewport.png)
+
+![Quân cờ và tiến độ chung](screenshots/campaign-desktop-plan-first-gate-board.png)
+
+Các ảnh phần dưới là bản giao diện trước, được giữ làm tài liệu lịch sử.
 
 ## Lộ trình Duo đến band 8.0
 

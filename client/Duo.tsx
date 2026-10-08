@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   Link,
   useNavigate,
@@ -11,10 +11,13 @@ import {
   Check,
   CircleCheck,
   Clock3,
+  Flag,
   HeartHandshake,
+  Leaf,
   LockKeyhole,
   RefreshCw,
   ShieldCheck,
+  Trophy,
   Users,
 } from "lucide-react";
 import type { Attempt } from "../shared/types";
@@ -120,11 +123,162 @@ function ResultBadge({ status }: { status: DuoResultStatus | null }) {
     </Badge>
   );
 }
+/** Decorative game pieces. Completion and unlocks always come from the server. */
+function CampaignEmblem({
+  kind = "camp",
+  className = "",
+}: {
+  kind?: "camp" | "gate" | "trophy" | "summit";
+  className?: string;
+}) {
+  return (
+    <svg className={`duo-emblem ${className}`} viewBox="0 0 120 120" aria-hidden="true">
+      <ellipse cx="60" cy="101" rx="43" ry="10" fill="#193e2d" opacity=".15" />
+      <path d="M15 88 60 66l45 22-45 24Z" fill="#b8894a" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+      <path d="M15 80 60 58l45 22-45 23Z" fill="#d8df9f" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+      {kind === "camp" ? (
+        <>
+          <path d="m34 82 25-47 28 47Z" fill="#c95134" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m59 35 11 47H47Z" fill="#f3ca7b" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M25 75v-9m-9 0 9-24 9 24Z" fill="#315e3c" stroke="#193e2d" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M94 67V25m0 0h18l-5 8 5 8H94" fill="#eab55b" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m76 92 16-8m-16 0 16 8" stroke="#573b29" strokeWidth="4" strokeLinecap="round" />
+          <path d="M79 83c-6-9 6-13 5-22 10 9 14 17 5 22Z" fill="#ef8641" stroke="#9b3d26" strokeWidth="2.5" />
+        </>
+      ) : kind === "gate" ? (
+        <>
+          <path d="M29 80V39h10v8h10v-8h22v8h10v-8h10v41Z" fill="#e7c285" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="M49 80V66a11 11 0 0 1 22 0v14" fill="#193e2d" stroke="#573b29" strokeWidth="3" />
+          <path d="M39 56v13m42-13v13" stroke="#a37547" strokeWidth="4" strokeLinecap="round" />
+          <path d="M60 39V17m0 0h22l-7 9 7 7H60" fill="#c95134" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m51 87 9-6 10 6-10 5Z" fill="#eecb91" />
+        </>
+      ) : kind === "trophy" ? (
+        <>
+          <path d="M43 34H29v12c0 15 17 21 23 16m25-28h14v12c0 15-17 21-23 16" fill="none" stroke="#a56a28" strokeWidth="5" strokeLinejoin="round" />
+          <path d="M40 29h40v19c0 16-10 23-20 23S40 64 40 48Z" fill="#f0bb51" stroke="#573b29" strokeWidth="3" />
+          <path d="M60 71v12m-15 0h30v9H45Z" fill="#c9933a" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m60 38 4 8 9 2-7 6 1 9-7-4-7 4 1-9-7-6 9-2Z" fill="#fff0bb" />
+          <path d="m28 25-5-8m70 8 5-8M60 18V8" stroke="#eab55b" strokeWidth="3" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <path d="m27 80 32-56 33 56Z" fill="#8f9b79" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m59 24-13 23 12-5 10 7 3-6Z" fill="#fff4d7" stroke="#573b29" strokeWidth="2" strokeLinejoin="round" />
+          <path d="M59 24V8m0 0h23l-7 8 7 8H59" fill="#c95134" stroke="#573b29" strokeWidth="3" strokeLinejoin="round" />
+          <path d="m32 84 8-19 8 19m29 2 8-18 8 18" fill="#315e3c" stroke="#193e2d" strokeWidth="2.5" strokeLinejoin="round" />
+          <path d="m53 86 6-12 5-6" fill="none" stroke="#eecb91" strokeWidth="5" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+function campaignProgress(duo: DuoSnapshot) {
+  return {
+    together: duo.bands.flatMap((band) => band.lessons).filter((lesson) => lesson.completed.husband && lesson.completed.wife).length,
+    gates: duo.bands.flatMap((band) => band.gates).filter((gate) => gate.unlocked).length,
+    bands: duo.bands.filter((band) => band.completed).length,
+    summit: duo.bands.some((band) => band.band === (duo.path?.targetBand ?? 8) && band.completed),
+  };
+}
+function CampaignStats({ duo }: { duo: DuoSnapshot }) {
+  const progress = campaignProgress(duo);
+  return (
+    <div className="duo-campaign-stats" aria-label="Các mốc hai người đã cùng hoàn thành">
+      <div><Leaf size={19} /><strong>{progress.together}</strong><span>Buổi cùng hoàn thành</span></div>
+      <div><ShieldCheck size={19} /><strong>{progress.gates}</strong><span>Duo Gate đã vượt</span></div>
+      <div><Flag size={19} /><strong>{progress.bands}</strong><span>Chặng band đã đạt</span></div>
+    </div>
+  );
+}
+function CampaignRewards({ duo }: { duo: DuoSnapshot }) {
+  const progress = campaignProgress(duo);
+  const rewards = [
+    { name: "Bước đầu đồng hành", condition: "Cùng hoàn thành buổi học đầu tiên", earned: progress.together > 0, kind: "camp" as const },
+    { name: "Vượt cổng kiến thức", condition: "Cả hai đạt Duo Gate đầu tiên", earned: progress.gates > 0, kind: "gate" as const },
+    { name: "Chinh phục chặng mới", condition: "Cùng hoàn thành một chặng band", earned: progress.bands > 0, kind: "trophy" as const },
+    { name: `Đỉnh band ${bandLabel(duo.path?.targetBand ?? 8)}`, condition: "Cả hai đạt đánh giá mục tiêu chung", earned: progress.summit, kind: "summit" as const },
+  ];
+  return (
+    <Card className="duo-rewards">
+      <div className="section-heading compact">
+        <div><p className="eyebrow">DẤU ẤN CỦA CHÚNG MÌNH</p><h2>Bộ sưu tập huy hiệu</h2></div>
+        <Trophy size={25} aria-hidden="true" />
+      </div>
+      <p className="muted">Huy hiệu mở khi cả hai hoàn thành các mốc trên lộ trình.</p>
+      <div className="duo-reward-grid">
+        {rewards.map((reward) => (
+          <article className={`duo-reward ${reward.earned ? "earned" : "unearned"}`} key={reward.name}>
+            <CampaignEmblem kind={reward.kind} />
+            <strong>{reward.name}</strong>
+            <p>{reward.condition}</p>
+            <span className="duo-reward-state">{reward.earned ? <CircleCheck size={14} /> : <LockKeyhole size={14} />}{reward.earned ? "Đã mở huy hiệu" : "Chưa mở huy hiệu"}</span>
+          </article>
+        ))}
+      </div>
+    </Card>
+  );
+}
+function lessonAnchor(band: DuoBandView, lesson: DuoLessonView) {
+  return `duo-stop-${String(band.band).replace(".", "-")}-${lesson.number}`;
+}
+function CampaignMap({ band, duo }: { band: DuoBandView; duo: DuoSnapshot }) {
+  const next = band.completed ? undefined : band.lessons.find((lesson) => lesson.unlocked && !lesson.completed[duo.role]);
+  const complete = band.lessons.filter((lesson) => lesson.completed.husband && lesson.completed.wife).length;
+  const rows = Math.ceil(band.lessons.length / 5);
+  const road = Array.from({ length: rows }, (_, row) => {
+    const y = 65 + row * 115;
+    return row === 0 ? `M100 ${y} H900` : row % 2 ? `Q990 ${y - 57} 900 ${y} H100` : `Q10 ${y - 57} 100 ${y} H900`;
+  }).join(" ");
+  return (
+    <Card className="duo-campaign-map">
+      <div className="duo-map-heading">
+        <div><p className="eyebrow">BẢN ĐỒ CHIẾN DỊCH · BAND {band.band.toFixed(1)}</p><h2>Đi từng bước, về cùng một đích</h2><p>Chọn một quân cờ để xem buổi học và tiến độ của cả hai.</p></div>
+        <span className="duo-map-progress"><CircleCheck size={18} /><strong>{complete}/{band.lessons.length}</strong><span>buổi cùng hoàn thành</span></span>
+      </div>
+      <div className="duo-board" style={{ "--duo-map-rows": rows } as CSSProperties}>
+        <svg className="duo-board-road" viewBox={`0 0 1000 ${rows * 115}`} preserveAspectRatio="none" aria-hidden="true"><path d={road} fill="none" stroke="#a88b54" strokeWidth="23" strokeLinecap="round" opacity=".22" /><path d={road} fill="none" stroke="#fff5d8" strokeWidth="13" strokeLinecap="round" /><path d={road} fill="none" stroke="#9d8353" strokeWidth="2" strokeDasharray="5 12" strokeLinecap="round" /></svg>
+        <div className="duo-board-terrain" aria-hidden="true"><span className="duo-map-tree tree-one" /><span className="duo-map-tree tree-two" /><span className="duo-map-tree tree-three" /><span className="duo-map-hill" /></div>
+        {band.lessons.map((lesson, index) => {
+          const both = lesson.completed.husband && lesson.completed.wife;
+          const one = lesson.completed.husband || lesson.completed.wife;
+          const row = Math.floor(index / 5), column = row % 2 ? 5 - index % 5 : index % 5 + 1;
+          const gate = band.gates.find((item) => item.afterLesson === lesson.number);
+          const state = both ? "complete" : one ? "partial" : lesson.unlocked ? "open" : "locked";
+          return (
+            <a
+              className={`duo-board-stop ${state} ${next?.id === lesson.id ? "next" : ""}`}
+              key={lesson.id}
+              style={{ gridColumn: column, gridRow: row + 1 }}
+              href={`#${lessonAnchor(band, lesson)}`}
+              aria-label={`Buổi ${lesson.number}: ${lesson.title}. ${both ? "Cả hai đã hoàn thành" : one ? "Một người đã hoàn thành" : lesson.unlocked ? "Đã mở buổi học" : "Buổi học chưa mở"}${gate ? `. Duo Gate ${gate.number} ở cuối buổi này` : ""}`}
+              onClick={(event) => {
+                event.preventDefault();
+                const destination = document.getElementById(lessonAnchor(band, lesson));
+                destination?.focus({ preventScroll: true });
+                destination?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+              }}
+            >
+              <span className="duo-board-piece">{both ? <Flag size={21} /> : !lesson.unlocked ? <LockKeyhole size={18} /> : <span>{String(lesson.number).padStart(2, "0")}</span>}</span>
+              <strong>Buổi {String(lesson.number).padStart(2, "0")}</strong>
+              {gate && <span className={`duo-board-gate ${gate.unlocked ? "passed" : ""}`}><ShieldCheck size={12} />Gate {gate.number}</span>}
+              <span className="duo-board-member-dots" aria-hidden="true"><i className={lesson.completed.husband ? "done" : ""} /><i className={lesson.completed.wife ? "done" : ""} /></span>
+            </a>
+          );
+        })}
+      </div>
+      <div className="duo-board-footer">
+        <p><Flag size={17} />{!band.unlocked ? "Chặng này đang chờ cả hai vượt kỳ thi nâng band trước." : band.completed ? "Hai người đã chinh phục chặng này. Các buổi học luôn có thể ôn lại." : next ? `Lượt học gợi ý cho bạn: Buổi ${String(next.number).padStart(2, "0")}.` : "Bạn đã hoàn thành các buổi hiện đã mở. Xem Duo Gate để cùng bước tiếp."}</p>
+        <div className="duo-map-legend" aria-label="Chú giải bản đồ"><span><i className="complete" />Cả hai đã hoàn thành</span><span><i className="partial" />Một người đã hoàn thành</span><span><i className="open" />Đã mở</span><span><LockKeyhole size={12} />Chưa mở</span></div>
+      </div>
+    </Card>
+  );
+}
 function MemberLevels({ duo }: { duo: DuoSnapshot }) {
   return (
     <div className="duo-members">
       {duo.members.map((member) => (
-        <div className="duo-member" key={member.id}>
+        <div className={`duo-member duo-member-${member.role}`} key={member.id}>
           <span className="avatar">{member.name.split(" ").at(-1)?.[0]}</span>
           <div>
             <strong>{member.name}</strong>
@@ -168,7 +322,7 @@ export function DuoDashboardCard() {
           <p className="eyebrow">HAI NGƯỜI · MỘT HÀNH TRÌNH</p>
           <h2>Lộ trình Duo của chúng mình</h2>
         </div>
-        <HeartHandshake size={30} />
+        <CampaignEmblem kind="camp" className="duo-overview-emblem" />
       </div>
       <div className="duo-levels">
         <div>
@@ -182,6 +336,7 @@ export function DuoDashboardCard() {
         </div>
         <Badge>{statusName[duo.status]}</Badge>
       </div>
+      <CampaignStats duo={duo} />
       <MemberLevels duo={duo} />
       <div className="duo-overview-footer">
         <p>
@@ -301,6 +456,14 @@ export function DuoPlanPage() {
           </Link>
         }
       />
+      <section className="duo-campaign-intro" aria-label="Chiến dịch học tập của hai người">
+        <div className="duo-campaign-intro-copy">
+          <span className="duo-campaign-ribbon"><Flag size={15} />CHIẾN DỊCH ĐỒNG HÀNH</span>
+          <h2>Hai người, một bản đồ.<br />Cùng chinh phục band 8.0.</h2>
+          <p>Mỗi buổi học là một bước tiến. Mỗi chặng hoàn thành là một dấu ấn của chúng mình.</p>
+        </div>
+        <img className="duo-campaign-world" src="/assets/campaign-world.webp" alt="" />
+      </section>
       <Card className="duo-overview">
         <div className="duo-levels">
           <div>
@@ -314,6 +477,7 @@ export function DuoPlanPage() {
           </div>
           <Badge>{statusName[duo.status]}</Badge>
         </div>
+        <CampaignStats duo={duo} />
         <MemberLevels duo={duo} />
       </Card>
       <div className="notice">
@@ -388,12 +552,15 @@ export function DuoPlanPage() {
                   </span>
                 </div>
               )}
+              <CampaignMap band={band} duo={duo} />
               <div className="duo-journey">
                 {band.lessons.map((lesson) => (
                   <div className="duo-journey-group" key={lesson.id}>
                     <article
-                      className={`duo-lesson ${!lesson.unlocked ? "locked" : ""}`}
+                      className={`duo-lesson ${!lesson.unlocked ? "locked" : ""} ${lesson.completed.husband && lesson.completed.wife ? "completed" : ""}`}
                       data-testid={`duo-lesson-${lesson.number}`}
+                      id={lessonAnchor(band, lesson)}
+                      tabIndex={-1}
                     >
                       <div className="duo-step-number">
                         {String(lesson.number).padStart(2, "0")}
@@ -465,6 +632,7 @@ export function DuoPlanPage() {
               />
             </>
           )}
+          <CampaignRewards duo={duo} />
           <Card className="duo-assessment-history">
             <h2>Các lượt đánh giá của bạn</h2>
             {duo.assessments.length ? (
@@ -590,7 +758,7 @@ function PromotionCard({
     <Card className="duo-promotion">
       <div className="duo-gate-heading">
         <span className="duo-gate-icon">
-          <Users size={28} />
+          <Trophy size={28} />
         </span>
         <div>
           <p className="eyebrow">CÙNG SẴN SÀNG · CÙNG BƯỚC TIẾP</p>
@@ -798,7 +966,7 @@ export function DuoRoomPage() {
       <PageHeader
         eyebrow="CÙNG SẴN SÀNG CHO BƯỚC TIẾP THEO"
         title={`Phòng thi nâng band ${room.band.toFixed(1)}`}
-        description="Hai người xác nhận sẵn sàng; máy chủ bắt đầu đếm ngược và giữ cùng hạn nộp khi tải lại trang."
+        description="Hai người vào phòng, xác nhận sẵn sàng rồi cùng bắt đầu lượt thử thách nâng band."
       />
       {(error || state.error) && (
         <ErrorNotice
@@ -811,7 +979,7 @@ export function DuoRoomPage() {
       )}
       <Card className="duo-room-card">
         <div className="duo-room-symbol">
-          <Users size={40} />
+          <CampaignEmblem kind="gate" />
         </div>
         <h2>
           {room.status === "completed"
@@ -832,7 +1000,7 @@ export function DuoRoomPage() {
             return (
               <div
                 key={member.role}
-                className={presence.present ? "present" : ""}
+                className={`duo-room-member-${member.role} ${presence.present ? "present" : ""} ${presence.ready ? "ready" : ""}`}
               >
                 <span className="avatar">
                   {member.name.split(" ").at(-1)?.[0]}

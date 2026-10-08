@@ -4,6 +4,8 @@ Website luyện IELTS bằng **React 19 + TypeScript + Vite**, **Node.js 24 + Ex
 
 Yêu cầu trực tiếp của người dùng quyết định công nghệ và cách truy cập: **kho bài tập và đề thi thử luôn được làm riêng; chỉ kỳ thi nâng band cần cả hai cùng vào phòng**. Đặc tả Duo v1.1 bổ sung placement theo điểm thấp hơn, Duo Gate và bảo lưu kết quả đạt. [Ma trận yêu cầu](docs/requirements.md), [hợp đồng API](docs/api-contract.md), [cấu hình đăng nhập riêng](docs/duo-auth.md) và [kết quả kiểm tra](docs/validation.md) mô tả chi tiết.
 
+Giao diện [chiến dịch Hỏa + Mộc](docs/campaign-design.md) dùng bản đồ hoạt hình, quân cờ và huy hiệu theo tiến độ thật của cả hai. Font Be Vietnam Pro hỗ trợ tiếng Việt được lưu trong dự án và phục vụ cùng website.
+
 ## Chạy local
 
 Cần Node.js **24+**, npm, Docker/Compose và trình duyệt hiện đại.
@@ -114,6 +116,6 @@ Build trước browser tests vì fixture Duo phục vụ React từ `dist`. Test
 
 [docs/cloud-start.md](docs/cloud-start.md) mô tả setup/start lại cloud. Tiến trình đang chạy không tồn tại qua publish environment; cấu hình draft cần Review → Save → Publish. Localhost trong cloud không phải URL công khai.
 
-VPS có nhiều project dùng [bộ cập nhật riêng](deploy/README.md); `deploy/update-duo.sh` đọc credentials hash-only qua stdin, ghim commit/SHA256, giới hạn tài nguyên build và chỉ chuyển app IELTS. MongoDB, nguồn cũ, học liệu đã có và cấu hình các website khác được đối chiếu; không rollback/xóa dữ liệu sau khi bản mới có thể đã ghi. URL đã triển khai trước đó là `https://sutonghanyu.vn`; việc bản Duo đã chạy tại đó cần kết quả updater và kiểm tra live, không suy từ build cloud.
+VPS có nhiều project dùng [bộ cập nhật riêng](deploy/README.md); `deploy/update-duo.sh` đọc credentials hash-only qua stdin, ghim commit/SHA256, giới hạn tài nguyên build và chỉ chuyển app IELTS. MongoDB, nguồn cũ, học liệu đã có và cấu hình các website khác được đối chiếu; không rollback/xóa dữ liệu sau khi bản mới có thể đã ghi. HTTPS công khai của `https://sutonghanyu.vn` đã xác nhận Duo phone auth và ngân hàng 544/84/744/640. Giao diện chiến dịch mới vẫn cần chạy updater và kiểm tra live riêng; xem [ảnh preview](docs/preview.md).
 
 Production dùng Node hosting hoặc Dockerfile, HTTPS `APP_ORIGIN` và MongoDB được bảo vệ. Express phục vụ cả `dist` và API cùng một port; reverse proxy cung cấp TLS. Không tắt TLS/checksums để xử lý lỗi tải dependency. Xem [MongoDB](docs/mongodb.md) và [triển khai](deploy/README.md).
