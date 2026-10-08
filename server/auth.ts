@@ -9,6 +9,11 @@ import type { NextFunction, Request, Response } from "express";
 import type { Profile } from "../shared/types";
 import type { Database, UserRecord } from "./storage";
 import { ApiError } from "./errors";
+import {
+  duoAccountForUser,
+  duoCredentialVersion,
+  type DuoAuthenticationOptions,
+} from "./duo-auth";
 
 const scrypt = promisify(scryptCallback);
 const SESSION_DAYS = 14;
@@ -27,7 +32,7 @@ export async function verifyPassword(
   stored: string,
 ): Promise<boolean> {
   const [algorithm, salt, hashText] = stored.split(":");
-  if (algorithm !== "scrypt" || !salt || !hashText) return false;
+  if (algorithm !== "scrypt" || !/^[a-f0-9]{32}$/.test(salt || "") || !/^[a-f0-9]{128}$/.test(hashText || "") || stored.split(":").length !== 3) return false;
   const expected = Buffer.from(hashText, "hex");
   const actual = (await scrypt(password, salt, expected.length)) as Buffer;
   return expected.length === actual.length && timingSafeEqual(expected, actual);
@@ -49,7 +54,15 @@ export async function createSession(
   response: Response,
   userId: string,
   production: boolean,
+  options: DuoAuthenticationOptions = {},
 ): Promise<void> {
+  let duoVersion: string | undefined;
+  if (options.duo) {
+    const user = await database.users.findOne({ _id: userId });
+    const account = user && duoAccountForUser(options.duo, user);
+    if (!account) throw new ApiError(401, "Tài khoản này không được phép đăng nhập.");
+    duoVersion = duoCredentialVersion(options.duo, account);
+  }
   const token = randomBytes(32).toString("base64url");
   const now = new Date();
   await database.sessions.insertOne({
@@ -57,6 +70,7 @@ export async function createSession(
     userId,
     createdAt: now,
     expiresAt: new Date(now.getTime() + SESSION_DAYS * 86400000),
+    ...(duoVersion ? { duoCredentialVersion: duoVersion } : {}),
   });
   response.cookie(COOKIE_NAME, token, cookieOptions(production));
 }
@@ -72,7 +86,7 @@ export async function deleteSession(
   const { maxAge: _maxAge, ...options } = cookieOptions(production);
   response.clearCookie(COOKIE_NAME, options);
 }
-export function attachLearner(database: Database) {
+export function attachLearner(database: Database, options: DuoAuthenticationOptions = {}) {
   return async (
     request: AuthenticatedRequest,
     _response: Response,
@@ -87,7 +101,12 @@ export function attachLearner(database: Database) {
         });
         if (session) {
           const learner = await database.users.findOne({ _id: session.userId });
-          if (learner) request.learner = learner;
+          if (learner) {
+            const account = options.duo && duoAccountForUser(options.duo, learner);
+            const sessionVersion = (session as typeof session & { duoCredentialVersion?: string }).duoCredentialVersion;
+            if (!options.duo || (account && sessionVersion === duoCredentialVersion(options.duo, account)))
+              request.learner = learner;
+          }
         }
       }
       next();

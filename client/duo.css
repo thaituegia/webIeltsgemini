@@ -1,0 +1,487 @@
+.duo-overview {
+  background: linear-gradient(125deg, #eef6ef, #fffdf7);
+}
+.duo-levels {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.duo-levels > div {
+  display: flex;
+  flex-direction: column;
+}
+.duo-levels > div > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.duo-levels strong {
+  font-size: 34px;
+  line-height: 1.3;
+  letter-spacing: -0.05em;
+  color: var(--teal);
+}
+.duo-members {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.duo-member {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: center;
+  gap: 11px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: #ffffffaa;
+  min-width: 0;
+}
+.duo-member strong,
+.duo-member small {
+  display: block;
+}
+.duo-member strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.duo-member small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.duo-member dl {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 24px;
+  margin: 3px 0 0;
+}
+.duo-member dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+.duo-member dd {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+}
+.duo-overview-footer {
+  margin-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.duo-overview-footer p,
+.duo-placement-status > p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.duo-placement-status > p {
+  margin-top: 16px;
+}
+.duo-waiting {
+  text-align: center;
+  padding: 42px 24px;
+}
+.duo-waiting > svg {
+  color: var(--teal);
+  margin-bottom: 15px;
+}
+.duo-waiting > p {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--muted);
+}
+.duo-waiting > .text-link {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+.duo-band-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.duo-band-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+}
+.duo-band-tabs button.selected {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+.duo-journey,
+.duo-journey-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.duo-lesson {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 16px;
+  min-width: 0;
+}
+.duo-lesson.locked {
+  background: #f0f2ed;
+}
+.duo-step-number {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: #edf4ed;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-size: 15px;
+  color: var(--teal);
+  font-weight: 700;
+}
+.duo-lesson-copy {
+  flex: 1;
+  min-width: 0;
+}
+.duo-lesson-copy > .badge {
+  background: transparent;
+  padding: 0;
+}
+.duo-lesson h3 {
+  font-size: 15px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.duo-completion {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+.duo-completion > span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.duo-completion .done {
+  color: var(--teal);
+}
+.duo-gate {
+  border: 1px solid #dbd8b3;
+  background: #fbfaf0;
+}
+.duo-gate.passed {
+  border-color: #bcdcc6;
+  background: #eff7f0;
+}
+.duo-gate-heading {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+}
+.duo-gate-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: var(--teal);
+  background: #e7eee1;
+}
+.duo-gate-heading h3,
+.duo-gate-heading h2 {
+  margin-bottom: 6px;
+}
+.duo-gate-heading p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 0;
+}
+.duo-result-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0;
+}
+.duo-result-row > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  background: #ffffffad;
+  border-radius: 11px;
+  padding: 11px 13px;
+}
+.duo-gate-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.duo-gate-footer > p {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  max-width: 650px;
+}
+.duo-promotion {
+  background: #e8f3ed;
+  border: 1px solid #b9d7c7;
+}
+.duo-revision {
+  background: #f8e9dd;
+  color: #80522f;
+}
+.duo-history-list {
+  display: flex;
+  flex-direction: column;
+}
+.duo-history-list > a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 0;
+  border-top: 1px solid var(--border);
+}
+.duo-history-list > a > div {
+  flex: 1;
+  min-width: 0;
+}
+.duo-history-list strong,
+.duo-history-list small {
+  display: block;
+}
+.duo-history-list strong {
+  font-size: 13px;
+}
+.duo-history-list small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.duo-room-card {
+  text-align: center;
+}
+.duo-room-symbol {
+  color: var(--teal);
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  background: #eef6ec;
+  border-radius: 50%;
+  margin: 0 auto 22px;
+}
+.duo-room-members {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 740px;
+  margin: 25px auto;
+  gap: 18px;
+}
+.duo-room-members > div {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 12px;
+  background: #f6f7f2;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px 16px;
+}
+.duo-room-members > div.present {
+  background: #f0f7ee;
+  border-color: #b4d4b5;
+}
+.duo-room-members > div > span:not(.avatar) {
+  font-size: 12px;
+}
+.duo-room-members .status-dot {
+  display: inline-block;
+  margin-right: 7px;
+}
+.status-dot.offline {
+  background: #a7aca5;
+}
+.duo-room-members small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.duo-room-card > .notice {
+  max-width: 650px;
+  margin: 18px auto;
+  display: block;
+  text-align: center;
+}
+.duo-room-card > .tiny {
+  margin: 22px auto 0;
+  max-width: 650px;
+}
+.duo-countdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0;
+}
+.duo-countdown strong {
+  font-size: 60px;
+  color: var(--teal);
+  line-height: 1;
+}
+.duo-countdown span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.duo-companion-choice {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  margin: 0 auto 20px;
+  max-width: 580px;
+}
+.duo-companion-choice input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+.duo-assessment-parts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.duo-part-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 17px;
+  flex-wrap: wrap;
+}
+.duo-part-heading > .badge:last-child {
+  margin-left: auto;
+}
+.duo-assessment-parts h2 {
+  font-size: 18px;
+}
+.duo-assessment-summary > p {
+  margin: 14px 0;
+}
+.duo-assessment-summary .row {
+  font-size: 12px;
+  color: var(--muted);
+}
+.duo-attempt-context {
+  background: #edf5ec;
+  border-color: #c6dcc7;
+}
+.duo-attempt-context > p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 12px 0;
+}
+@media (max-width: 700px) {
+  .duo-members,
+  .duo-room-members,
+  .duo-result-row,
+  .duo-assessment-parts {
+    grid-template-columns: 1fr;
+  }
+  .duo-overview-footer,
+  .duo-gate-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .duo-levels {
+    gap: 16px;
+  }
+  .duo-levels > .badge {
+    flex-basis: auto;
+  }
+  .duo-lesson {
+    padding: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .duo-lesson-copy {
+    flex: 1;
+    width: calc(100% - 54px);
+  }
+  .duo-lesson > .button {
+    width: 100%;
+    margin-top: 4px;
+  }
+  .duo-result-row > div {
+    align-items: flex-start;
+  }
+  .duo-gate-heading {
+    gap: 11px;
+  }
+  .duo-gate-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+  .duo-gate-heading h2 {
+    font-size: 18px;
+  }
+  .duo-room-members {
+    gap: 12px;
+  }
+  .duo-room-members > div {
+    padding: 18px;
+  }
+  .duo-band-tabs button {
+    font-size: 12px;
+    padding: 8px 11px;
+  }
+  .duo-history-list > a {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+.duo-regrade {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 18px;
+}
+
+.practice-band-guide {
+  border: 1px solid #c6dcc7;
+  background: #f0f7ed;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+.practice-band-guide summary {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: var(--teal);
+  font-weight: 650;
+  cursor: pointer;
+}
+.practice-band-guide[open] summary {
+  margin-bottom: 16px;
+}
+.practice-band-guide p {
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 0;
+}

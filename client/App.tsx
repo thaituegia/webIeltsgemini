@@ -39,13 +39,14 @@ import {
   SettingsPage,
 } from "./pages";
 import { LibraryPage, ExamPage, PlacementPage, LearningPage } from "./Learning";
+import { DuoPlanPage, DuoAssessmentPage, DuoRoomPage } from "./Duo";
 
 const links = [
   ["/dashboard", "Tổng quan", LayoutDashboard],
   ["/library", "Kho bài tập", LibraryBig],
   ["/exams", "Thi thử IELTS", ClipboardCheck],
   ["/placement", "Kiểm tra đầu vào", Compass],
-  ["/plan", "Lộ trình của tôi", RouteIcon],
+  ["/plan", "Lộ trình của hai người", RouteIcon],
   ["/vocabulary", "Sổ từ vựng", Layers],
   ["/history", "Lịch sử học", History],
   ["/errors", "Sổ lỗi thường gặp", NotebookPen],
@@ -156,7 +157,7 @@ export default function App() {
           </nav>
           <div className="sidebar-goal">
             <Sparkles size={20} />
-            <p>Mục tiêu của bạn</p>
+            <p>Mục tiêu chung</p>
             <strong>Band {user.targetBand.toFixed(1)}</strong>
             <Link to="/plan">
               Xem lộ trình <ArrowUpRight size={15} />
@@ -168,9 +169,7 @@ export default function App() {
             </div>
             <div>
               <strong>{user.name}</strong>
-              <small>
-                {user.demo ? "Tài khoản trải nghiệm" : "Người học IELTS"}
-              </small>
+              <small>{"Thành viên Duo"}</small>
             </div>
             <button
               className="icon-button"
@@ -185,7 +184,7 @@ export default function App() {
           <div className="topbar">
             <span className="topbar-note">
               <span className="status-dot" />
-              Không gian học của bạn
+              Không gian học của hai người
             </span>
             <div className="topbar-right">
               <span>
@@ -210,7 +209,17 @@ export default function App() {
               <Route path="/exams" element={<ExamPage />} />
               <Route path="/placement" element={<PlacementPage />} />
               <Route path="/learn/:attemptId" element={<LearningPage />} />
-              <Route path="/plan" element={<PlanPage />} />
+              <Route
+                path="/plan"
+                element={
+                  health?.duoEnabled === false ? <PlanPage /> : <DuoPlanPage />
+                }
+              />
+              <Route
+                path="/duo/assessments/:assessmentId"
+                element={<DuoAssessmentPage />}
+              />
+              <Route path="/duo/rooms/:roomId" element={<DuoRoomPage />} />
               <Route path="/vocabulary" element={<VocabularyPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/errors" element={<ErrorsPage />} />
@@ -244,6 +253,152 @@ function Logo() {
   );
 }
 function AuthPage({
+  health,
+  setUser,
+  error,
+  retry,
+}: {
+  health: Health | null;
+  setUser: (user: Profile) => void;
+  error: string;
+  retry: () => void;
+}) {
+  if (health?.duoEnabled === false)
+    return (
+      <LegacyAuthPage
+        health={health}
+        setUser={setUser}
+        error={error}
+        retry={retry}
+      />
+    );
+  return <DuoAuthPage setUser={setUser} error={error} retry={retry} />;
+}
+function DuoAuthPage({
+  setUser,
+  error,
+  retry,
+}: {
+  setUser: (user: Profile) => void;
+  error: string;
+  retry: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [localError, setLocalError] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setLocalError("");
+    const form = new FormData(event.currentTarget);
+    try {
+      const result = await api<{ user: Profile }>("/auth/login", {
+        method: "POST",
+        body: json({
+          phone: String(form.get("phone")).trim(),
+          password: String(form.get("password")),
+        }),
+      });
+      setUser(result.user);
+    } catch (cause) {
+      setLocalError(
+        cause instanceof Error ? cause.message : "Không thể đăng nhập.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="auth-layout">
+      <section className="auth-story">
+        <Logo />
+        <div className="auth-story-content">
+          <div className="pill">
+            <Sparkles size={16} /> TWO LEARNERS. ONE JOURNEY.
+          </div>
+          <h1>
+            Cùng nhau tiến bộ.
+            <br />
+            <em>Cùng chạm band 8.0.</em>
+          </h1>
+          <p>
+            Một mục tiêu chung, hai nhịp học riêng. Tích lũy từng ngày và cùng
+            bước lên band tiếp theo.
+          </p>
+          <div className="auth-feature">
+            <Check /> Lộ trình chung từ kết quả đầu vào của cả hai
+          </div>
+          <div className="auth-feature">
+            <Check /> Kho bài tập và thi thử luôn có thể học riêng
+          </div>
+          <div className="auth-feature">
+            <Check /> Cùng tham gia kỳ thi nâng band
+          </div>
+          <LearningIllustration />
+        </div>
+        <div className="auth-story-footer">
+          <ShieldCheck size={17} /> Bài làm và câu trả lời được lưu riêng cho
+          từng người
+        </div>
+      </section>
+      <section className="auth-panel">
+        <div className="auth-box">
+          <p className="eyebrow">HÀNH TRÌNH IELTS CỦA HAI NGƯỜI</p>
+          <h2>Chào mừng bạn trở lại.</h2>
+          <p className="muted">
+            Đăng nhập bằng số điện thoại để tiếp tục hành trình Duo.
+          </p>
+          {(error || localError) && (
+            <ErrorNotice
+              message={localError || error}
+              retry={error ? retry : undefined}
+            />
+          )}
+          <form
+            className="stack auth-form"
+            onSubmit={(event) => void submit(event)}
+          >
+            <label className="field">
+              Số điện thoại
+              <input
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="username"
+                required
+                maxLength={20}
+                placeholder="Nhập số điện thoại của bạn"
+              />
+            </label>
+            <label className="field">
+              Mật khẩu
+              <input
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                minLength={1}
+                maxLength={128}
+                required
+                placeholder="Nhập mật khẩu của bạn"
+              />
+            </label>
+            <Button disabled={busy} type="submit" className="full">
+              {busy ? "Đang đăng nhập…" : "Đăng nhập"}
+              <ArrowUpRight size={18} />
+            </Button>
+          </form>
+          <p className="auth-demo-note">
+            Không gian riêng dành cho hai thành viên đã được thiết lập.
+          </p>
+          <div className="auth-bottom">
+            <Headphones size={17} />
+            <span>Reading · Listening · Writing · Speaking</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+function LegacyAuthPage({
   health,
   setUser,
   error,

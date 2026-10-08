@@ -14,6 +14,8 @@ import { resolve } from "node:path";
 import { once } from "node:events";
 import { pipeline } from "node:stream/promises";
 import { ApiError } from "./errors";
+import { loadDuoCredentials, loginDuo, type DuoCredentialSettings } from "./duo-auth";
+import { createDuoService } from "./duo";
 import {
   services,
   evaluateWriting,
@@ -74,6 +76,9 @@ export interface AppConfig {
   origin?: string;
   serveClient?: boolean;
   trustProxy?: boolean | number | string;
+  duoEnabled?: boolean;
+  duoCredentials?: DuoCredentialSettings;
+  duo?: Parameters<typeof createDuoService>[1];
 }
 const skills = [
   "reading",
@@ -85,7 +90,7 @@ const skills = [
 const band = z
   .number()
   .min(3)
-  .max(7)
+  .max(8)
   .refine((value) => Number.isInteger(value * 2), "Band phải là bội số 0,5.");
 const examDate = z
   .string()
@@ -202,8 +207,13 @@ function planOf(plan: PlanRecord): StudyPlan {
 
 export function createApp(database: Database, config: AppConfig = {}): Express {
   const production = config.production ?? process.env.NODE_ENV === "production";
-  const demoEnabled =
-    config.demoEnabled ?? (process.env.DEMO_ENABLED !== "false" && !production);
+  const clockNow = config.duo?.now ?? Date.now;
+  const duoEnabled = config.duoEnabled ?? (production || process.env.DUO_ENABLED !== "false");
+  const duoCredentials = duoEnabled ? config.duoCredentials ?? loadDuoCredentials() : undefined;
+  const authOptions = duoCredentials ? { duo: duoCredentials } : {};
+  const duoService = duoEnabled ? createDuoService(database, config.duo) : null;
+  const demoEnabled = !duoEnabled &&
+    (config.demoEnabled ?? (process.env.DEMO_ENABLED !== "false" && !production));
   const maxLearners =
     config.maxLearners ?? Number(process.env.MAX_LEARNERS || 2);
   if (!Number.isInteger(maxLearners) || maxLearners < 1 || maxLearners > 100)
@@ -254,7 +264,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     legacyHeaders: false,
     message: { error: "Quá nhiều yêu cầu đăng nhập. Vui lòng thử lại sau." },
   });
-  app.use("/api/auth", attachLearner(database));
+  app.use("/api/auth", attachLearner(database, authOptions));
   app.get(
     "/api/health",
     asyncRoute(async (_request, response) => {
@@ -269,6 +279,8 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         status: "ok",
         database: "mongodb",
         demoEnabled,
+        duoEnabled,
+        authMode: duoEnabled ? "phone" : "email",
         services: services(),
         bank: { lessons, mocks, vocabulary, placement },
       });
@@ -299,6 +311,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     "/api/auth/register",
     authLimiter,
     asyncRoute(async (request, response) => {
+      if (duoEnabled) throw new ApiError(403, "Website chỉ dùng hai tài khoản số điện thoại đã cấu hình.");
       const input = registerSchema.parse(request.body);
       if (await database.users.findOne({ email: input.email }))
         throw new ApiError(409, "Email này đã có tài khoản.");
@@ -337,6 +350,14 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     "/api/auth/login",
     authLimiter,
     asyncRoute(async (request, response) => {
+      if (duoCredentials) {
+        const input = z.object({ phone: z.string().min(1).max(24), password: z.string().min(1).max(128) }).strict().parse(request.body);
+        const user = await loginDuo(database, duoCredentials, input);
+        await deleteSession(database, request, response, production);
+        await createSession(database, response, user.id, production, authOptions);
+        response.json({ user: profileOf(user) });
+        return;
+      }
       const { email, password } = z
         .object({
           email: z.email().max(200),
@@ -364,7 +385,8 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
       response.json({ ok: true });
     }),
   );
-  app.use("/api", attachLearner(database), requireLearner);
+  app.use("/api", attachLearner(database, authOptions), requireLearner);
+  duoService?.registerRoutes(app);
 
   async function contentOf(contentId: string): Promise<StoredContent> {
     const content = await database.content.findOne({ _id: contentId });
@@ -387,42 +409,89 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     if (owned) await database.recordings.delete(fileId);
   }
   const submissionLocks = new Set<string>();
+  type LeasedAttempt = AttemptRecord & { submissionLease?: { token: string; expiresAt: string } };
+  const sourceFilter = (record: AttemptRecord) => ({
+    _id: record.id, userId: record.userId, status: "in-progress" as const,
+    responses: record.responses, essays: record.essays, transcript: record.transcript,
+  });
+  const freeLeaseFilter = () => ({ $or: [
+    { submissionLease: { $exists: false } },
+    { "submissionLease.expiresAt": { $lte: new Date(clockNow()).toISOString() } },
+  ] });
+  async function claimAttemptLease(record: AttemptRecord): Promise<LeasedAttempt> {
+    const token = newId();
+    const updated = await database.attempts.findOneAndUpdate(
+      { ...sourceFilter(record), ...freeLeaseFilter() },
+      // Whisper (120s), Azure (810s) and the rubric scorer (90s) can run in
+      // sequence. Keep the lease beyond that complete provider budget.
+      { $set: { submissionLease: { token, expiresAt: new Date(clockNow() + 20 * 60_000).toISOString() } } },
+      { returnDocument: "after" },
+    );
+    if (!updated) throw new ApiError(409, "Bài đang được lưu/chấm ở phiên khác hoặc bản nháp đã thay đổi. Hãy đợi rồi tải lại.");
+    return updated as LeasedAttempt;
+  }
+  async function renewAttemptLease(record: AttemptRecord, token: string): Promise<void> {
+    const updated = await database.attempts.updateOne(
+      { ...sourceFilter(record), "submissionLease.token": token,
+        "submissionLease.expiresAt": { $gt: new Date(clockNow()).toISOString() } },
+      { $set: { "submissionLease.expiresAt": new Date(clockNow() + 20 * 60_000).toISOString() } },
+    );
+    if (!updated.matchedCount) throw new ApiError(409, "Phiên lưu bản nói đã hết hạn hoặc bài đã thay đổi. Hãy tải lại.");
+  }
+  async function releaseAttemptLease(record: AttemptRecord, token: string): Promise<void> {
+    await database.attempts.updateOne(
+      { _id: record.id, userId: record.userId, "submissionLease.token": token },
+      { $unset: { submissionLease: "" } },
+    );
+  }
   async function submitAttempt(
     record: AttemptRecord,
     transcript?: string,
     audio?: { buffer: Buffer; mimetype: string },
     onProgress?: (event: { stage: string; transcript?: string }) => void,
+    heldLeaseToken?: string,
   ): Promise<AttemptRecord> {
-    const latest = await database.attempts.findOne({
+    let latest = await database.attempts.findOne({
       _id: record.id,
       userId: record.userId,
     });
     if (!latest) throw new ApiError(404, "Không tìm thấy lượt luyện.");
-    if (latest.status === "submitted") return latest;
+    if (latest.status === "submitted") {
+      await duoService?.attemptSubmitted(latest);
+      return latest;
+    }
     const lockKey = `${record.userId}:${record.id}`;
-    if (submissionLocks.has(lockKey))
+    if (submissionLocks.has(lockKey) && !heldLeaseToken)
       throw new ApiError(
         409,
         "Bài này đang được chấm. Vui lòng đợi rồi tải lại kết quả.",
       );
-    submissionLocks.add(lockKey);
+    if (!heldLeaseToken) submissionLocks.add(lockKey);
+    let leaseToken: string | undefined = heldLeaseToken;
     let detectedTranscript: string | undefined;
     try {
+      if (heldLeaseToken) {
+        if ((latest as LeasedAttempt).submissionLease?.token !== heldLeaseToken)
+          throw new ApiError(409, "Phiên lưu bài đã thay đổi. Hãy tải lại.");
+      } else {
+        latest = await claimAttemptLease(latest);
+        leaseToken = (latest as LeasedAttempt).submissionLease!.token;
+      }
       const content = await contentOf(latest.contentId);
       const expired = Boolean(
-        latest.deadlineAt && Date.parse(latest.deadlineAt) <= Date.now(),
+        latest.deadlineAt && Date.parse(latest.deadlineAt) <= clockNow(),
       );
       const blankWriting =
         content.skill === "writing" &&
         !Object.values(latest.essays).some((essay) => essay.trim());
+      const savedSpeaking = content.skill === "speaking" && !audio
+        ? await database.audio.findOne({ userId: latest.userId, attemptId: latest.id }) : null;
       const blankSpeaking =
         content.skill === "speaking" &&
         !(transcript ?? latest.transcript).trim() &&
         !audio &&
-        !(await database.audio.findOne(
-          { userId: latest.userId, attemptId: latest.id },
-          { projection: { _id: 1 } },
-        ));
+        !savedSpeaking;
+      const savedSpeechPending = content.skill === "speaking" && !audio && Boolean(savedSpeaking) && !(transcript ?? latest.transcript).trim();
       const emptyFeedback: Feedback = {
         id: newId(),
         skill: content.skill,
@@ -436,10 +505,12 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         paragraphs: [],
         answers: [],
         source: "rule-based",
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(clockNow()).toISOString(),
       };
       const feedback: Feedback =
-        expired && (blankWriting || blankSpeaking)
+        savedSpeechPending
+          ? { ...emptyFeedback, summary: "Bản ghi âm đã lưu trước hạn; đang chờ dịch vụ nhận dạng và chấm AI. Chưa có đủ kết quả để xét nâng band." }
+          : expired && (blankWriting || blankSpeaking)
           ? emptyFeedback
           : content.skill === "writing"
             ? await evaluateWriting(content, latest.essays)
@@ -455,11 +526,11 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
                 )
               : gradeObjective(content, latest.responses);
       const updated = await database.attempts.findOneAndUpdate(
-        { _id: latest.id, userId: latest.userId, status: "in-progress" },
+        { ...sourceFilter(latest), "submissionLease.token": leaseToken },
         {
           $set: {
             status: "submitted",
-            submittedAt: new Date().toISOString(),
+            submittedAt: new Date(clockNow()).toISOString(),
             feedback,
             transcript: feedback.transcript ?? transcript ?? latest.transcript,
             durationSeconds:
@@ -475,16 +546,20 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
           409,
           "Trạng thái bài luyện đã thay đổi. Hãy tải lại.",
         );
+      await duoService?.attemptSubmitted(updated);
       return updated;
     } catch (error) {
       if (detectedTranscript)
         await database.attempts.updateOne(
-          { _id: latest.id, userId: latest.userId, status: "in-progress" },
+          { ...sourceFilter(latest), "submissionLease.token": leaseToken },
           { $set: { transcript: detectedTranscript } },
         );
       throw error;
     } finally {
-      submissionLocks.delete(lockKey);
+      if (!heldLeaseToken) {
+        try { if (leaseToken) await releaseAttemptLease(latest, leaseToken); }
+        finally { submissionLocks.delete(lockKey); }
+      }
     }
   }
   async function attemptOf(
@@ -498,7 +573,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
       expire &&
       record.status === "in-progress" &&
       record.deadlineAt &&
-      Date.parse(record.deadlineAt) <= Date.now()
+      Date.parse(record.deadlineAt) <= clockNow()
     ) {
       // Deadline is stored by the server and never reset by a browser reload.
       return submitAttempt(record);
@@ -510,8 +585,9 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
       _id: _id,
       userId: _userId,
       listeningPlayed: _listeningPlayed,
+      submissionLease: _submissionLease,
       ...view
-    } = record;
+    } = record as LeasedAttempt;
     const audioAvailable = Boolean(
       await database.audio.findOne(
         { userId: record.userId, attemptId: record.id },
@@ -587,6 +663,8 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     asyncRoute(async (request, response) => {
       const input = profileSchema.partial().parse(request.body);
       const user = learnerOf(request);
+      if (duoEnabled && ((input.name !== undefined && input.name !== user.name) || (input.targetBand !== undefined && input.targetBand !== 8)))
+        throw new ApiError(400, "Tên tài khoản cố định và mục tiêu chung band 8.0 được giữ theo lộ trình Duo.");
       const updated = await database.users.findOneAndUpdate(
         { _id: user.id },
         { $set: input },
@@ -733,10 +811,19 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         .object({
           contentId: z.string().max(120),
           mode: z.enum(["practice", "exam"]).default("practice"),
+          duoAssessmentId: z.string().regex(/^[\w:.-]{1,180}$/).optional(),
         })
         .parse(request.body);
       const content = await contentOf(input.contentId);
       const user = learnerOf(request);
+      if (input.duoAssessmentId && !duoService) throw new ApiError(403, "Lộ trình Duo chưa được bật.");
+      const protectedContext = duoService ? await duoService.beforeAttempt(user, input) : {};
+      if (protectedContext.existingAttemptId) {
+        const bound = await database.attempts.findOne({ _id: protectedContext.existingAttemptId, userId: user.id, duoAssessmentId: input.duoAssessmentId, contentId: content.id });
+        if (!bound) throw new ApiError(409, "Lượt thi Duo đã liên kết chưa sẵn sàng; hãy tải lại phòng thi.");
+        response.json({ attempt: await attemptView(await attemptOf(user.id, bound.id)) });
+        return;
+      }
       const existing = await database.attempts.findOne({
         userId: user.id,
         contentId: content.id,
@@ -745,14 +832,17 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
       });
       if (
         existing &&
-        (!existing.deadlineAt || Date.parse(existing.deadlineAt) > Date.now())
+        (!existing.deadlineAt || Date.parse(existing.deadlineAt) > clockNow())
       ) {
+        if (existing.duoAssessmentId !== input.duoAssessmentId)
+          throw new ApiError(409, "Bạn đang làm bài này ở lượt khác. Hãy nộp lượt đó trước khi bắt đầu bài đánh giá Duo.");
+        await duoService?.bindAttempt(user, existing.id, input.duoAssessmentId);
         response.json({ attempt: await attemptView(existing) });
         return;
       }
       if (existing) await submitAttempt(existing);
       const id = newId();
-      const now = new Date();
+      const now = new Date(clockNow());
       const record: AttemptRecord = {
         _id: id,
         id,
@@ -764,17 +854,18 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         status: "in-progress",
         startedAt: now.toISOString(),
         deadlineAt:
-          input.mode === "exam"
+          protectedContext.deadlineAt ?? (input.mode === "exam"
             ? new Date(
                 now.getTime() + content.durationMinutes * 60000,
               ).toISOString()
-            : null,
+            : null),
         submittedAt: null,
         durationSeconds: 0,
         responses: {},
         essays: {},
         transcript: "",
         feedback: null,
+        ...(protectedContext.duoAssessmentId ? { duoAssessmentId: protectedContext.duoAssessmentId } : {}),
       };
       try {
         await database.attempts.insertOne(record);
@@ -788,9 +879,13 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
           status: "in-progress",
         });
         if (!concurrent) throw error;
+        if (concurrent.duoAssessmentId !== input.duoAssessmentId)
+          throw new ApiError(409, "Bài này đang mở ở lượt khác; không thể dùng lượt thường để xác nhận kết quả Duo.");
+        await duoService?.bindAttempt(user, concurrent.id, input.duoAssessmentId);
         response.json({ attempt: await attemptView(concurrent) });
         return;
       }
+      await duoService?.bindAttempt(user, record.id, input.duoAssessmentId);
       response.status(201).json({ attempt: await attemptView(record) });
     }),
   );
@@ -826,6 +921,8 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     asyncRoute(async (request, response) => {
       const input = patchSchema.parse(request.body);
       const user = learnerOf(request);
+      if (submissionLocks.has(`${user.id}:${idOf(request)}`))
+        throw new ApiError(409, "Bài đang được lưu/chấm; hãy đợi kết quả trước khi sửa bản nháp.");
       const record = await attemptOf(user.id, idOf(request));
       if (record.status !== "in-progress")
         throw new ApiError(
@@ -868,7 +965,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
             "$durationSeconds",
             Math.min(
               input.durationSeconds,
-              Math.floor((Date.now() - Date.parse(record.startedAt)) / 1000),
+              Math.floor((clockNow() - Date.parse(record.startedAt)) / 1000),
             ),
           ],
         };
@@ -877,7 +974,11 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         return;
       }
       const updated = await database.attempts.findOneAndUpdate(
-        { _id: record.id, userId: user.id, status: "in-progress" },
+        // Pipeline merges stay atomic for independent concurrent draft saves;
+        // the persisted lease fences a save that began before grading started.
+        { _id: record.id, userId: user.id, status: "in-progress", ...freeLeaseFilter(), $and: [
+          { $or: [{ deadlineAt: null }, { deadlineAt: { $gt: new Date(clockNow()).toISOString() } }] },
+        ] },
         [{ $set: changes }],
         { returnDocument: "after" },
       );
@@ -933,6 +1034,50 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
       });
     }),
   );
+  app.post(
+    "/api/attempts/:id/regrade",
+    asyncRoute(async (request, response) => {
+      const record = await attemptOf(learnerOf(request).id, idOf(request), false);
+      if (!duoService || !record.duoAssessmentId || record.status !== "submitted" || !["writing", "speaking"].includes(record.skill))
+        throw new ApiError(400, "Chỉ chấm lại phần Viết/Nói đã nộp trong bài đánh giá Duo.");
+      if (record.feedback?.source === "ai" && record.feedback.estimatedBand !== null) {
+        await duoService.attemptSubmitted(record);
+        response.json({ attempt: await attemptView(record) });
+        return;
+      }
+      if (!services().openai) throw new ApiError(503, "Chấm AI chưa được cấu hình. Bài làm đã lưu và tiếp tục chờ chấm.");
+      const lockKey = `${record.userId}:${record.id}`;
+      if (submissionLocks.has(lockKey)) throw new ApiError(409, "Bài đang được chấm; hãy đợi kết quả.");
+      submissionLocks.add(lockKey);
+      try {
+        const content = await contentOf(record.contentId);
+        let audio: { buffer: Buffer; mimetype: string } | undefined;
+        if (record.skill === "speaking") {
+          const saved = await database.audio.findOne({ userId: record.userId, attemptId: record.id });
+          if (saved) {
+            const owned = await database.db.collection("recordings.files").findOne({ _id: saved.fileId, "metadata.userId": record.userId, "metadata.attemptId": record.id });
+            if (!owned || typeof owned.length !== "number" || owned.length > 25 * 1024 * 1024) throw new ApiError(400, "Bản ghi âm của bài chưa hợp lệ để chấm lại.");
+            const chunks: Buffer[] = []; let bytes = 0;
+            for await (const chunk of database.recordings.openDownloadStream(saved.fileId)) {
+              bytes += chunk.length;
+              if (bytes > 25 * 1024 * 1024) throw new ApiError(400, "Bản ghi âm vượt giới hạn chấm lại.");
+              chunks.push(Buffer.from(chunk));
+            }
+            audio = { buffer: Buffer.concat(chunks), mimetype: saved.mime };
+          }
+        }
+        const feedback = record.skill === "writing" ? await evaluateWriting(content, record.essays) : await evaluateSpeaking(content, record.transcript, audio);
+        const updated = await database.attempts.findOneAndUpdate(
+          { _id: record.id, userId: record.userId, status: "submitted", "feedback.id": record.feedback?.id ?? null },
+          { $set: { feedback, transcript: feedback.transcript ?? record.transcript } },
+          { returnDocument: "after" },
+        );
+        if (!updated) throw new ApiError(409, "Kết quả đã thay đổi ở phiên khác; hãy tải lại.");
+        await duoService.attemptSubmitted(updated);
+        response.json({ attempt: await attemptView(updated) });
+      } finally { submissionLocks.delete(lockKey); }
+    }),
+  );
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
@@ -959,134 +1104,162 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
     "/api/attempts/:id/speaking",
     upload.single("audio"),
     asyncRoute(async (request, response) => {
-      const record = await attemptOf(
-        learnerOf(request).id,
-        idOf(request),
-        false,
-      );
-      if (record.skill !== "speaking")
-        throw new ApiError(400, "Đây không phải bài Speaking.");
-      if (record.status === "submitted") {
-        const result = { attempt: await attemptView(record) };
-        if (request.get("accept")?.includes("text/event-stream")) {
-          response
-            .type("text/event-stream")
-            .send(`event: result\ndata: ${JSON.stringify(result)}\n\n`);
-        } else response.json(result);
-        return;
-      }
-      const transcript = z
-        .string()
-        .max(40000)
-        .parse(request.body?.transcript ?? record.transcript);
-      const file = request.file;
-      const savedRecording = !file
-        ? await database.audio.findOne({
-            userId: record.userId,
-            attemptId: record.id,
-          })
-        : null;
-      if (!transcript.trim() && !file && !savedRecording)
-        throw new ApiError(
-          400,
-          "Hãy ghi âm hoặc nhập transcript để luyện tập.",
-        );
-      let audioInput = file
-        ? { buffer: file.buffer, mimetype: file.mimetype }
-        : undefined;
-      if (savedRecording) {
-        const owned = await database.db
-          .collection("recordings.files")
-          .findOne({
-            _id: savedRecording.fileId,
-            "metadata.userId": record.userId,
-            "metadata.attemptId": record.id,
-          });
-        if (!owned) throw new ApiError(404, "Không tìm thấy bản ghi của bạn.");
-        const chunks: Buffer[] = [];
-        for await (const chunk of database.recordings.openDownloadStream(
-          savedRecording.fileId,
-        )) {
-          if (!(chunk instanceof Uint8Array))
-            throw new Error("Invalid recording chunk");
-          chunks.push(Buffer.from(chunk));
-        }
-        audioInput = {
-          buffer: Buffer.concat(chunks),
-          mimetype: savedRecording.mime,
-        };
-      }
-      if (file) {
-        const stream = database.recordings.openUploadStream(
-          `recording-${record.id}`,
-          {
-            contentType: file.mimetype,
-            metadata: { userId: record.userId, attemptId: record.id },
-          },
-        );
-        const completed = once(stream, "finish");
-        stream.end(file.buffer);
-        await completed;
-        const previous = await database.audio.findOneAndUpdate(
-          { userId: record.userId, attemptId: record.id },
-          {
-            $set: {
-              fileId: stream.id,
-              mime: file.mimetype,
-              createdAt: new Date().toISOString(),
-            },
-            $setOnInsert: {
-              _id: newId(),
-              userId: record.userId,
-              attemptId: record.id,
-            },
-          },
-          { upsert: true, returnDocument: "before" },
-        );
-        if (previous)
-          await deleteOwnedRecording(record.userId, record.id, previous.fileId);
-      }
-      await database.attempts.updateOne(
-        { _id: record.id, userId: record.userId, status: "in-progress" },
-        { $set: { transcript } },
-      );
-      const wantsStream = request.get("accept")?.includes("text/event-stream");
-      if (!wantsStream) {
-        const result = await submitAttempt(
-          { ...record, transcript },
-          transcript,
-          audioInput,
-        );
-        response.json({ attempt: await attemptView(result) });
-        return;
-      }
-      response.setHeader("Content-Type", "text/event-stream");
-      response.setHeader("X-Accel-Buffering", "no");
-      response.flushHeaders();
-      const send = (name: string, data: unknown) => {
-        if (!response.destroyed)
-          response.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
-      };
-      const heartbeat = setInterval(() => {
-        if (!response.destroyed) response.write(": keepalive\n\n");
-      }, 15000);
+      const userId = learnerOf(request).id;
+      const attemptId = idOf(request);
+      const lockKey = `${userId}:${attemptId}`;
+      if (submissionLocks.has(lockKey)) throw new ApiError(409, "Bản nói đang được lưu/chấm; hãy đợi kết quả.");
+      submissionLocks.add(lockKey);
+      let leaseToken: string | undefined;
+      let record: AttemptRecord | undefined;
       try {
-        const result = await submitAttempt(
-          { ...record, transcript },
-          transcript,
-          audioInput,
-          (event) => send("progress", event),
-        );
-        send("result", { attempt: await attemptView(result) });
-      } catch (error) {
-        send("error", {
-          error:
-            error instanceof Error ? error.message : "Không thể chấm Speaking.",
-          status: error instanceof ApiError ? error.status : 500,
+        record = await attemptOf(userId, attemptId, false);
+        if (record.skill !== "speaking")
+          throw new ApiError(400, "Đây không phải bài Speaking.");
+        if (record.status === "submitted") {
+          const result = { attempt: await attemptView(record) };
+          if (request.get("accept")?.includes("text/event-stream")) {
+            response
+              .type("text/event-stream")
+              .send(`event: result\ndata: ${JSON.stringify(result)}\n\n`);
+          } else response.json(result);
+          return;
+        }
+        record = await claimAttemptLease(record);
+        leaseToken = (record as LeasedAttempt).submissionLease!.token;
+        if (record.deadlineAt && Date.parse(record.deadlineAt) <= clockNow()) {
+          await submitAttempt(record, undefined, undefined, undefined, leaseToken);
+          throw new ApiError(409, "Đã hết giờ thi. Bài đã khóa; chỉ bản nháp và âm thanh đã lưu trước hạn được xét chấm.");
+        }
+        const acceptedAt = new Date(clockNow()).toISOString();
+        const transcript = z
+          .string()
+          .max(40000)
+          .parse(request.body?.transcript ?? record.transcript);
+        const file = request.file;
+        const previousRecording = await database.audio.findOne({
+          userId: record.userId,
+          attemptId: record.id,
         });
+        const savedRecording = !file ? previousRecording : null;
+        if (!transcript.trim() && !file && !savedRecording)
+          throw new ApiError(
+            400,
+            "Hãy ghi âm hoặc nhập transcript để luyện tập.",
+          );
+        let audioInput = file
+          ? { buffer: file.buffer, mimetype: file.mimetype }
+          : undefined;
+        if (savedRecording) {
+          const owned = await database.db
+            .collection("recordings.files")
+            .findOne({
+              _id: savedRecording.fileId,
+              "metadata.userId": record.userId,
+              "metadata.attemptId": record.id,
+            });
+          if (!owned) throw new ApiError(404, "Không tìm thấy bản ghi của bạn.");
+          const chunks: Buffer[] = [];
+          for await (const chunk of database.recordings.openDownloadStream(
+            savedRecording.fileId,
+          )) {
+            if (!(chunk instanceof Uint8Array))
+              throw new Error("Invalid recording chunk");
+            chunks.push(Buffer.from(chunk));
+          }
+          audioInput = {
+            buffer: Buffer.concat(chunks),
+            mimetype: savedRecording.mime,
+          };
+        }
+        if (file) {
+          const stream = database.recordings.openUploadStream(
+            `recording-${record.id}`,
+            {
+              contentType: file.mimetype,
+              metadata: { userId: record.userId, attemptId: record.id },
+            },
+          );
+          const completed = once(stream, "finish");
+          stream.end(file.buffer);
+          await completed;
+          try {
+            // A process may resume after its upload lease was reclaimed. Fence
+            // publication before touching the current pointer or deleting audio.
+            await renewAttemptLease(record, leaseToken);
+            const metadata = { fileId: stream.id, mime: file.mimetype, createdAt: acceptedAt };
+            if (previousRecording) {
+              const published = await database.audio.updateOne(
+                { _id: previousRecording._id, userId: record.userId, attemptId: record.id, fileId: previousRecording.fileId },
+                { $set: metadata },
+              );
+              if (!published.matchedCount) throw new ApiError(409, "Bản ghi âm đã thay đổi ở phiên khác.");
+            } else {
+              try {
+                await database.audio.insertOne({ _id: newId(), userId: record.userId, attemptId: record.id, ...metadata });
+              } catch (error) {
+                if (error instanceof Error && "code" in error && error.code === 11000)
+                  throw new ApiError(409, "Bản ghi âm đã được lưu ở phiên khác.");
+                throw error;
+              }
+            }
+          } catch (error) {
+            await deleteOwnedRecording(record.userId, record.id, stream.id);
+            throw error;
+          }
+        }
+        const saved = await database.attempts.findOneAndUpdate(
+          { ...sourceFilter(record), "submissionLease.token": leaseToken },
+          { $set: { transcript } },
+          { returnDocument: "after" },
+        );
+        if (!saved) throw new ApiError(409, "Bản nói đã thay đổi ở phiên khác; chưa áp dụng kết quả chấm.");
+        record = saved;
+        if (file && previousRecording)
+          await deleteOwnedRecording(record.userId, record.id, previousRecording.fileId);
+        const wantsStream = request.get("accept")?.includes("text/event-stream");
+        if (!wantsStream) {
+          const result = await submitAttempt(
+            { ...record, transcript },
+            transcript,
+            audioInput,
+            undefined,
+            leaseToken,
+          );
+          response.json({ attempt: await attemptView(result) });
+          return;
+        }
+        response.setHeader("Content-Type", "text/event-stream");
+        response.setHeader("X-Accel-Buffering", "no");
+        response.flushHeaders();
+        const send = (name: string, data: unknown) => {
+          if (!response.destroyed)
+            response.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+        };
+        const heartbeat = setInterval(() => {
+          if (!response.destroyed) response.write(": keepalive\n\n");
+        }, 15000);
+        try {
+          const result = await submitAttempt(
+            { ...record, transcript },
+            transcript,
+            audioInput,
+            (event) => send("progress", event),
+            leaseToken,
+          );
+          send("result", { attempt: await attemptView(result) });
+        } catch (error) {
+          send("error", {
+            error:
+              error instanceof Error ? error.message : "Không thể chấm Speaking.",
+            status: error instanceof ApiError ? error.status : 500,
+          });
+        } finally {
+          clearInterval(heartbeat);
+          response.end();
+        }
       } finally {
-        clearInterval(heartbeat);
-        response.end();
+        try { if (record && leaseToken) await releaseAttemptLease(record, leaseToken); }
+        finally { submissionLocks.delete(lockKey); }
       }
     }),
   );
@@ -1281,7 +1454,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         example: vocabulary?.examples[0] || input.example || "",
         cefr: vocabulary?.cefr || input.cefr || "B1",
         topic: vocabulary?.topic || input.topic || "Personal",
-        savedAt: new Date().toISOString(),
+        savedAt: new Date(clockNow()).toISOString(),
         ...vocabularyMetrics(scheduler),
         scheduler,
         reviewLog: [],
@@ -1407,7 +1580,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         currentQuestionId: null,
         answers: [],
         result: null,
-        startedAt: new Date().toISOString(),
+        startedAt: new Date(clockNow()).toISOString(),
       };
       record.currentQuestionId = (
         await selectQuestion(record, record.theta)
@@ -1496,10 +1669,12 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
           {
             $set: {
               currentBand: estimate.estimatedBand,
+              personalEstimatedBand: estimate.estimatedBand,
               cefr: cefrForBand(estimate.estimatedBand),
             },
           },
         );
+      if (complete) await duoService?.placementCompleted(learnerOf(request), updated);
       response.json({ placement: await placementView(updated) });
     }),
   );
@@ -1550,8 +1725,8 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
           database.plans.find({ userId }).toArray(),
           database.audio.find({ userId }).toArray(),
         ]);
-      const withoutStorage = (record: { _id: string; userId: string }) => {
-        const { _id: _id, userId: _userId, ...view } = record;
+      const withoutStorage = (record: { _id: string; userId: string; submissionLease?: unknown }) => {
+        const { _id: _id, userId: _userId, submissionLease: _submissionLease, ...view } = record;
         return view;
       };
       response.setHeader(
@@ -1559,7 +1734,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         'attachment; filename="ielts-learning-data.json"',
       );
       response.json({
-        exportedAt: new Date().toISOString(),
+        exportedAt: new Date(clockNow()).toISOString(),
         profile: profileOf(learnerOf(request)),
         attempts: attempts.map(withoutStorage),
         cards: cards.map(cardOf),
@@ -1574,6 +1749,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
   app.delete(
     "/api/account/history",
     asyncRoute(async (request, response) => {
+      if (duoEnabled) throw new ApiError(409, "Lịch sử đang làm bằng chứng cho lộ trình chung. Dùng chức năng xuất dữ liệu để lưu lại bài làm.");
       z.object({ confirm: z.literal(true) }).parse(request.body);
       const userId = learnerOf(request).id;
       if ([...submissionLocks].some((key) => key.startsWith(`${userId}:`)))

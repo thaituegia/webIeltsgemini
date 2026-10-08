@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { contentBank, placementBank, vocabularyBank } from "../server/data/index.js";
+import { v3ContentBank as contentBank, v3PlacementBank as placementBank, v3VocabularyBank as vocabularyBank } from "../server/data/index.js";
 import { contentStructureIssues } from "../shared/content-visuals.js";
 import type { ContentSection, StoredContent } from "../shared/types.js";
 import { gradeObjective } from "../server/learning.js";

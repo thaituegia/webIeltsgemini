@@ -70,6 +70,7 @@ import {
 } from "./audio";
 import { SectionVisuals } from "./ContentVisual";
 import "./learning.css";
+import { DuoPlacementStatus, DuoAttemptContext } from "./Duo";
 
 const icons = {
   reading: BookOpen,
@@ -185,8 +186,8 @@ function ContentLibrary({ exam }: { exam: boolean }) {
         title={exam ? "Phòng thi thử IELTS" : "Kho bài tập của bạn"}
         description={
           exam
-            ? "Làm trọn một kỹ năng, theo thời gian thật. Kết quả giúp bạn chọn bước luyện tiếp theo."
-            : "Những bài luyện đa dạng, từ nền tảng đến thử thách. Chọn điều bạn muốn tiến bộ hôm nay."
+            ? "Thi thử riêng theo thời gian thật, bất cứ khi nào bạn sẵn sàng. Chỉ kỳ thi nâng band trong lộ trình cần cả hai."
+            : "Tự chọn bài và học riêng theo nhịp của bạn, từ nền tảng đến band 8.0. Kho bài tập luôn mở cho cả hai."
         }
         action={
           !exam && (
@@ -322,7 +323,7 @@ function ContentLibrary({ exam }: { exam: boolean }) {
           onChange={(event) => setBand(event.target.value)}
         >
           <option value="">Mọi band</option>
-          {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7].map((value) => (
+          {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].map((value) => (
             <option key={value} value={value}>
               Band {value.toFixed(1)}
             </option>
@@ -498,7 +499,7 @@ function ContentLibrary({ exam }: { exam: boolean }) {
             <label className="field">
               Band mục tiêu
               <select name="band" defaultValue={band || "5.5"}>
-                {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7].map((value) => (
+                {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].map((value) => (
                   <option value={value} key={value}>
                     {value.toFixed(1)}
                   </option>
@@ -605,6 +606,7 @@ export function PlacementPage() {
         title="Khám phá trình độ hiện tại"
         description="Một bài đánh giá thích ứng giúp bạn tìm điểm bắt đầu phù hợp, với khoảng bất định được trình bày rõ ràng."
       />
+      <DuoPlacementStatus />
       {error && <ErrorNotice message={error} />}
       {active.error && (
         <ErrorNotice
@@ -673,7 +675,7 @@ export function PlacementPage() {
               <ul>
                 <li>Thích ứng theo độ khó từng câu</li>
                 <li>Ước lượng kèm sai số chuẩn</li>
-                <li>Điều chỉnh hồ sơ và lộ trình</li>
+                <li>Cập nhật ước lượng cá nhân của bạn</li>
               </ul>
               <Button
                 className="secondary"
@@ -776,7 +778,7 @@ export function PlacementPage() {
             </p>
             <div className="row wrap">
               <Link className="button" to="/plan">
-                Xem lộ trình cá nhân
+                Xem lộ trình của hai người
                 <ArrowRight size={17} />
               </Link>
               <Button className="secondary" onClick={() => setPlacement(null)}>
@@ -1308,6 +1310,7 @@ export function LearningPage() {
   const locked = submitted || busy || remaining === 0;
   return (
     <div className="stack page-stack learning-page">
+      <DuoAttemptContext attempt={attempt} />
       <div className="learning-breadcrumb">
         <Link to={attempt.mode === "exam" ? "/exams" : "/library"}>
           <ArrowLeft size={14} />
@@ -1375,6 +1378,17 @@ export function LearningPage() {
           )}
         </div>
       </div>
+      {attempt.mode === "practice" && content.source === "ai" &&
+        content.format === "lesson" && content.band >= 7.5 &&
+        !!content.objectives?.length && (
+          <details className="practice-band-guide">
+            <summary><Sparkles size={18} /> Hướng dẫn luyện band {content.band.toFixed(1)}</summary>
+            <div className="stack">
+              <p className="muted">Gợi ý cách học, tiêu chí tự rà soát và ví dụ diễn đạt. Dùng để luyện và tự sửa trước khi chuyển sang thi thử.</p>
+              {content.objectives.map((objective, index) => <p key={index}>{objective}</p>)}
+            </div>
+          </details>
+        )}
       {attempt.mode === "exam" && !submitted && (
         <div className="notice exam-notice">
           <Clock3 size={18} />

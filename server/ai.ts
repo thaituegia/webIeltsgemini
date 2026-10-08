@@ -934,7 +934,7 @@ const generatedSchema = z.object({
 });
 const generationRequestSchema = z.object({
   skill: z.enum(["reading", "listening", "writing", "speaking", "grammar"]),
-  band: z.number().min(3).max(7).multipleOf(0.5),
+  band: z.number().min(3).max(8).multipleOf(0.5),
   topic: z.string().trim().min(2).max(100),
   testType: z.enum(["academic", "general"]),
 });
@@ -949,7 +949,7 @@ export async function generateContent(input: {
   if (!parsed.success)
     throw new ApiError(
       400,
-      "Chọn kỹ năng, chủ đề, loại bài thi và band 3.0–7.0 hợp lệ.",
+      "Chọn kỹ năng, chủ đề, loại bài thi và band 3.0–8.0 hợp lệ.",
     );
   const requestData = parsed.data;
   const formatRules: Record<ContentKind, string> = {

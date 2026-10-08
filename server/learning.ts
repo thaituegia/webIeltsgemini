@@ -251,7 +251,7 @@ export function estimatePlacement(
   return {
     theta,
     standardError: 1 / Math.sqrt(information),
-    estimatedBand: Math.max(3, Math.min(7, roundBand(5 + theta / 1.2))),
+    estimatedBand: Math.max(3, Math.min(8, roundBand(5 + theta / 1.2))),
   };
 }
 export function placementFeedback(state: {

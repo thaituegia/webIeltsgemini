@@ -105,8 +105,8 @@ test('v3 Mongo seed preserves existing learner records and recordings, retains l
     const afterFirst = await Promise.all([
       database.content.find().sort({ _id: 1 }).toArray(), database.vocabulary.find().sort({ _id: 1 }).toArray(), database.placementItems.find().sort({ _id: 1 }).toArray(),
     ]);
-    assert.deepEqual(afterFirst.map(rows => rows.length), [552, 648, 576]);
-    assert.deepEqual([contentBank.length, vocabularyBank.length, placementBank.length], [552, 648, 576]);
+    assert.deepEqual(afterFirst.map(rows => rows.length), [contentBank.length, vocabularyBank.length, placementBank.length]);
+    assert.deepEqual([contentBank.length, vocabularyBank.length, placementBank.length], [628, 744, 640]);
     for (const [index, name] of ['content', 'vocabulary', 'placementItems'].entries()) {
       const current = new Set(afterFirst[index]!.map(item => item._id));
       assert.deepEqual(legacyIds[name as keyof typeof legacyIds].filter(id => current.has(id)), legacyIds[name as keyof typeof legacyIds], `${name}: a legacy ID disappeared`);
@@ -181,7 +181,7 @@ test('v3 Mongo seed preserves existing learner records and recordings, retains l
     const afterSecond = await Promise.all([
       database.content.find().sort({ _id: 1 }).toArray(), database.vocabulary.find().sort({ _id: 1 }).toArray(), database.placementItems.find().sort({ _id: 1 }).toArray(),
     ]);
-    assert.deepEqual(afterSecond.map(rows => rows.length), [552, 648, 576]);
+    assert.deepEqual(afterSecond.map(rows => rows.length), [contentBank.length, vocabularyBank.length, placementBank.length]);
     assert.deepEqual(afterSecond.map(documentHash), afterFirst.map(documentHash), 'a second seed changed a public document or added a duplicate');
   } finally {
     try {

@@ -139,7 +139,7 @@ test("quick placement adapts across 15 unique items and resumes the exact saved 
     .findOne({ userId: "demo-1", _id: placementId });
   expect(completed?.answers).toHaveLength(15);
   expect(completed?.result?.estimatedBand).toBeGreaterThanOrEqual(3);
-  expect(completed?.result?.estimatedBand).toBeLessThanOrEqual(7);
+  expect(completed?.result?.estimatedBand).toBeLessThanOrEqual(8);
   expect(completed?.theta).toBeGreaterThan(0);
   expect(
     new Set(completed?.answers.map((answer) => answer.questionId)).size,

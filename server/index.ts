@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { createApp } from "./app";
 import { connectDatabase, seedDatabase } from "./storage";
+import { loadDuoCredentials, provisionDuoAccounts } from "./duo-auth";
+import { z } from "zod";
 
 const port = Number(process.env.PORT || 3001);
 if (!Number.isInteger(port) || port < 1 || port > 65535)
@@ -19,9 +21,20 @@ if (production) {
     throw new Error("Production cần APP_ORIGIN HTTPS hợp lệ.");
   process.env.APP_ORIGIN = origin.origin;
 }
+const duoEnabled = production || process.env.DUO_ENABLED !== "false";
+// Validate private account configuration before any startup seed or binding.
+const duoCredentials = duoEnabled ? loadDuoCredentials() : undefined;
+const duoConfig = duoEnabled ? {
+  gateInterval: z.coerce.number().pipe(z.union([z.literal(5), z.literal(10)])).parse(process.env.DUO_GATE_INTERVAL || 5),
+  sessionsPerBand: z.coerce.number().int().min(5).max(100).parse(process.env.DUO_SESSIONS_PER_BAND || 20),
+  passPercent: z.coerce.number().min(1).max(100).parse(process.env.DUO_PASS_PERCENT || 70),
+  strictRetakeMode: z.enum(["true", "false"]).parse(process.env.DUO_STRICT_RETAKE_MODE || "false") === "true",
+  ...(process.env.DUO_SESSIONS_BY_BAND ? { sessionsByBand: z.record(z.string(), z.number().int().min(5).max(100)).parse(JSON.parse(process.env.DUO_SESSIONS_BY_BAND)) } : {}),
+} : undefined;
 const database = await connectDatabase();
 await seedDatabase(database);
-const app = createApp(database);
+if (duoCredentials) await provisionDuoAccounts(database, duoCredentials);
+const app = createApp(database, { duoEnabled, duoCredentials, duo: duoConfig });
 const server = app.listen(port, "0.0.0.0", () =>
   console.log(`IELTS AI API ready on port ${port}; MongoDB connected`),
 );

@@ -29,12 +29,14 @@ export interface SessionRecord {
   userId: string;
   expiresAt: Date;
   createdAt: Date;
+  duoCredentialVersion?: string;
 }
 export interface AttemptRecord
   extends Omit<Attempt, "content" | "audioAvailable"> {
   _id: string;
   userId: string;
   listeningPlayed?: boolean;
+  duoAssessmentId?: string;
 }
 export interface CardRecord extends VocabularyCard {
   _id: string;
@@ -164,7 +166,7 @@ export async function seedDatabase(database: Database): Promise<void> {
       contentBank.map((item) => ({
         updateOne: {
           filter: { _id: item.id },
-          update: { $set: { ...item, _id: item.id } },
+          update: { $setOnInsert: { ...item, _id: item.id } },
           upsert: true,
         },
       })),
@@ -175,7 +177,7 @@ export async function seedDatabase(database: Database): Promise<void> {
       vocabularyBank.map((item) => ({
         updateOne: {
           filter: { _id: item.id },
-          update: { $set: { ...item, _id: item.id } },
+          update: { $setOnInsert: { ...item, _id: item.id } },
           upsert: true,
         },
       })),
@@ -186,7 +188,7 @@ export async function seedDatabase(database: Database): Promise<void> {
       placementBank.map((item) => ({
         updateOne: {
           filter: { _id: item.id },
-          update: { $set: { ...item, _id: item.id } },
+          update: { $setOnInsert: { ...item, _id: item.id } },
           upsert: true,
         },
       })),

@@ -1,5 +1,25 @@
 # Kết quả kiểm tra
 
+## Duo và học liệu band 7.5–8.0 — 2026-10-08
+
+Hai tài khoản cố định đăng nhập bằng số điện thoại, với tên và mục tiêu 8.0 từ cấu hình riêng chứa hash scrypt. Không có số điện thoại hoặc mật khẩu thật trong source/bundle. Session cũ chưa gắn đúng danh tính không thể đăng nhập vào bản Duo. Kho bài và thi thường mở độc lập; backend bảo vệ riêng tiến độ lộ trình, Gate và kỳ thi nâng band.
+
+Lượt kiểm tra cuối trên source đã chốt đạt **172/172 Node tests, không skip**, với native Mongo cho updater/verifier; **26/26 Playwright desktop/mobile**; TypeScript và build Vite đạt. Production Node được chạy riêng với MongoDB thật và cấu hình Duo private: health phone-only, demo tắt, ngân hàng đúng số lượng, anonymous user null, đăng ký bị từ chối, SPA và JavaScript 415.010 byte phục vụ đúng. Kiểm tra này không tạo điểm hoặc tiến độ học giả và không triển khai lên VPS.
+
+Setup cloud được chạy lại thành công từ lockfile: `npm ci`, MongoDB ping, cả ba audit, production build và seed. Hash các collection cá nhân sau setup khớp receipt development trước đó; không xóa dữ liệu để kiểm tra startup.
+
+Ngân hàng đạt **544 bài luyện, 84 đề mô phỏng, 744 mục từ và 640 câu placement**. Bổ sung 64 bài luyện, 12 đề, 96 mục từ và 64 câu placement. Audit đối chiếu đúng hash nguồn của toàn bộ 552/648/576 bản ghi v3, chấm đủ 784 đáp án khách quan mới, kiểm tra dẫn chứng, giới hạn từ, bố cục, workload đề và hình vẽ. Không phát hiện nguồn hoặc hình mới trùng nguyên bản hay overlap Reading/Listening vượt ngưỡng 55% theo cụm 5 từ. Đây là kiểm tra tự động; nội dung vẫn có nhãn AI chưa được chuyên gia thẩm định và độ khó ước lượng.
+
+MongoDB test thực chứng minh seed chỉ thêm ID mới, giữ nguyên mọi học liệu cũ, kể cả các ID đã chỉnh sửa và học liệu thêm riêng. Hai lượt seed giữ nguyên 13 collection riêng, gồm bốn collection Duo, cùng ghi âm GridFS 4096 byte/32 chunk. Khi cập nhật database development thật, toàn bộ 552/648/576 tài liệu cũ và dữ liệu cá nhân giữ nguyên; provisioning bổ sung đúng hai tài khoản cố định, không xóa tài khoản legacy hoặc tiến độ.
+
+Kiểm thử backend bao gồm MIN placement, placement lại không reset, bằng chứng hoàn thành cá nhân, Gate bảo lưu pass, phòng thi hai Ready, đồng hồ server, pending AI, Companion/strict retake, band 7.5 → 8.0 và nâng band nguyên tử. Chấm lại chỉ dùng bài/âm thanh đã lưu của chủ tài khoản; dữ liệu nộp sau hạn bị từ chối. Provider transport trong tests được kiểm soát, không phải gọi chấm AI live.
+
+Bài nâng band Writing yêu cầu đủ các task và điểm AI của từng task. Nộp/chấm dùng lease MongoDB riêng và đối chiếu đúng bản làm, nên autosave hoặc upload từ phiên khác không đổi nguồn đang chấm. Worker hết hạn không thể thay/xóa ghi âm mới; API và JSON export không lộ token lease. Phòng thi giữ lượt đang được chấm hợp lệ qua hạn nộp, còn lease bỏ dở hết hạn cho phép thi lại. Năm tình huống race được chạy qua hai app instance trên cùng database test.
+
+`deploy/update-duo.sh` đã kiểm tra bằng Compose thực và MongoDB test, gồm payload toàn ngân hàng trên 7 MiB, helper regular-file 0600 và hash của collection Duo/cá nhân/ghi âm. Script chỉ thay app IELTS, giữ MongoDB, proxy, host Nginx, chứng chỉ, cấu hình và project khác. Bản Duo **chưa được triển khai trên VPS** trong lượt kiểm tra này; cloud không có kết nối SSH vào VPS, người dùng cần chạy lệnh đã ghim commit/checksum trong phiên SSH hiện có.
+
+Chưa có credentials để kiểm tra provider AI live. Writing/Speaking trong kỳ thi nâng band chờ kết quả AI hợp lệ; Speaking cần bằng chứng âm thanh phù hợp. Không thay bằng điểm giả. Build Node/Vite và trình duyệt chạy trực tiếp trên cloud; hạn chế CA proxy của Docker build nêu bên dưới vẫn áp dụng.
+
 ## Xác minh cập nhật VPS và sửa lỗi EAGAIN — 2026-10-08
 
 Người dùng đã chạy updater v3 trên VPS: build production đạt và app mới đang phục vụ. Kiểm tra độc lập qua HTTPS công khai xác nhận `https://sutonghanyu.vn/api/health` trả MongoDB, demo tắt và ngân hàng 480/72/648/576; session anonymous và JavaScript build cũng trả đúng. Đây là bằng chứng website mới đang chạy, chưa phải bằng chứng so sánh từng bản ghi cũ hoặc toàn bộ baseline trên VPS.
@@ -8,7 +28,7 @@ Lượt updater gốc dừng khi `mongosh` đọc manifest 7.963.147 byte trực
 
 `deploy/update.sh` sửa ba truy vấn nhận payload bằng helper chuyển dữ liệu tới file tạm riêng quyền 0600 trong đúng Mongo container, xác minh kích thước/SHA256, dùng regular-file stdin và tự dọn file. 22 kiểm thử updater đạt, gồm xác minh toàn bộ manifest và guarded rollback nhiều MB trong database test riêng; dữ liệu học tập được đối chiếu giữ nguyên. Không thay đổi điều kiện an toàn của rollback.
 
-`deploy/verify-update.sh` dành riêng cho app commit `3e6037bf7da2d9ddf5e84b4193353f7a721e9bc9` đã chạy. Script chỉ đọc các collection public, so sánh toàn bộ seed và bản ghi public cũ bằng canonical EJSON, đối chiếu image/digest/release/origin/loopback, HTTPS/assets và baseline container/cổng/cấu hình. Nó chỉ tạo receipt riêng và file tạm; không build, seed, restart, thay đổi database, proxy, host Nginx hoặc firewall. PID Nginx được kiểm tra giữ nguyên trong lượt xác minh; cấu hình được đối chiếu với audit trước cập nhật. Chưa thực thi script xác minh riêng trên VPS: cần receipt từ phiên SSH của người dùng để kết luận đối chiếu từng bản ghi và baseline đã đạt.
+`deploy/verify-update.sh` dành riêng cho app commit `3e6037bf7da2d9ddf5e84b4193353f7a721e9bc9` đã chạy. Script chỉ đọc các collection public, so sánh toàn bộ seed và bản ghi public cũ bằng canonical EJSON, đối chiếu image/digest/release/origin/loopback, HTTPS/assets và baseline container/cổng/cấu hình. Nó chỉ tạo receipt riêng và file tạm; không build, seed, restart, thay đổi database, proxy, host Nginx hoặc firewall. PID Nginx được kiểm tra giữ nguyên trong lượt xác minh; cấu hình được đối chiếu với audit trước cập nhật. Người dùng đã gửi kết quả xác minh đạt trên VPS: 552/648/576 seed khớp, 184/216/192 bản ghi cũ giữ nguyên, baseline container/cổng/cấu hình đạt. Đây là receipt của bản v3, không phải bằng chứng bản Duo đã triển khai.
 
 21 kiểm thử verifier đạt, gồm các nhánh thiếu/thay đổi bản ghi, custom material, BSON, audit selection và image parser từ heredoc thật. Truy vấn verifier thật nhận 10.549.633 byte qua stdin regular-file quyền 0600 trên MongoDB test: 552/648/576 bản ghi seed và 185/217/193 bản ghi cũ/custom khớp; hash của ba collection public và chín collection cá nhân giữ nguyên, file tạm được dọn. Lượt kiểm thử cuối bật native Mongo cho cả updater/verifier: **99/99 đạt, không skip**. TypeScript, cú pháp Bash và cả bảy Python heredoc đạt. Không chạy lại browser suite vì không thay đổi app/giao diện/học liệu.
 

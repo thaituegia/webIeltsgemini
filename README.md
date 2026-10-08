@@ -1,117 +1,119 @@
-# websiteIeltsAi — IELTS AI
+# websiteIeltsAi — IELTS AI Duo
 
-Website luyện IELTS bằng **React 19 + TypeScript + Vite**, **Node.js 24 + Express 5** và **MongoDB 8**. Giao diện tiếng Việt, học liệu tiếng Anh; hỗ trợ hai học viên với lịch sử riêng, Academic và General Training.
+Website luyện IELTS bằng **React 19 + TypeScript + Vite**, **Node.js 24 + Express 5** và **MongoDB 8**. Hai thành viên đăng nhập bằng số điện thoại, học theo một lộ trình chung tới **band 8.0**, với bài làm và kết quả cá nhân được lưu riêng. Giao diện tiếng Việt, học liệu tiếng Anh; hỗ trợ Academic và General Training.
 
-Mã nguồn được xây dựng mới theo hai PDF người dùng cung cấp. React + Node.js + MongoDB là yêu cầu trực tiếp của người dùng, thay cho Next.js/Supabase trong tài liệu. [Ma trận yêu cầu](docs/requirements.md) ghi rõ nguồn và phạm vi; [hợp đồng API](docs/api-contract.md) mô tả dữ liệu và endpoint.
+Yêu cầu trực tiếp của người dùng quyết định công nghệ và cách truy cập: **kho bài tập và đề thi thử luôn được làm riêng; chỉ kỳ thi nâng band cần cả hai cùng vào phòng**. Đặc tả Duo v1.1 bổ sung placement theo điểm thấp hơn, Duo Gate và bảo lưu kết quả đạt. [Ma trận yêu cầu](docs/requirements.md), [hợp đồng API](docs/api-contract.md), [cấu hình đăng nhập riêng](docs/duo-auth.md) và [kết quả kiểm tra](docs/validation.md) mô tả chi tiết.
 
-[Xem ảnh giao diện desktop/mobile](docs/preview.md) · [Kết quả kiểm tra](docs/validation.md).
+## Chạy local
 
-## Chạy tại máy của bạn
-
-Cần Node.js **24+**, npm, Docker có Docker Compose và một trình duyệt hiện đại.
+Cần Node.js **24+**, npm, Docker/Compose và trình duyệt hiện đại.
 
 ```sh
 npm ci
 cp .env.example .env
 npm run mongo:start
+```
+
+Chuẩn bị cấu hình **đúng hai tài khoản** trong kho secrets hoặc tệp riêng quyền `0600`, ngoài Git. Đặt `DUO_CREDENTIALS_FILE` thành đường dẫn tuyệt đối tới tệp đó trong `.env`; có thể dùng `DUO_ACCOUNTS_JSON` thay thế nhưng không cấu hình cả hai. Tệp chỉ chứa tên, số điện thoại, vai trò và **hash scrypt có salt**, không chứa mật khẩu nguyên văn. Xem [định dạng và provisioning](docs/duo-auth.md). Không dùng thông tin thật trong câu lệnh được lưu vào shell history.
+
+```sh
 npm run dev
 ```
 
-Mở `http://localhost:5173`. API chạy cổng 3001; frontend proxy giữ nguyên Host để xác thực cookie và kiểm tra Origin. Nếu thay cổng API, đặt `PORT` trong `.env`; Vite đọc cùng cấu hình. `WEB_PORT` thay cổng giao diện. Để dùng MongoDB đang có hoặc Atlas, đặt `MONGODB_URI` thực trong môi trường server và bỏ bước `mongo:start`.
+Mở `http://localhost:5173`; API dùng cổng 3001. `PORT` đổi cổng API, `WEB_PORT` đổi cổng Vite; proxy giữ cùng origin cho cookie. Nếu dùng MongoDB/Atlas đã có, đặt `MONGODB_URI` qua secrets và bỏ bước `mongo:start`. Startup kiểm tra cấu hình Duo trước khi kết nối/seed, dừng nếu cấu hình thiếu hoặc không hợp lệ.
 
-Chọn **Học viên 01 / 02** để thử ngay. Hai hồ sơ ban đầu không có lịch sử giả. Hoặc đăng ký tối đa hai tài khoản thật với email/mật khẩu riêng; hai hồ sơ thử không chiếm chỗ tài khoản thật. Mật khẩu được băm scrypt; session ngẫu nhiên được lưu dưới dạng hash trong MongoDB, cookie HttpOnly/SameSite.
+Đăng nhập chỉ nhận số điện thoại và mật khẩu đã cấu hình. Đăng ký, đăng nhập email và demo bị từ chối trong Duo. Tên và mục tiêu chung 8.0 là cố định; ngày thi, Academic/GT, thời lượng học và tự đánh giá cá nhân vẫn chỉnh được. Mật khẩu được băm scrypt; session ngẫu nhiên được lưu bằng hash trong MongoDB, gắn với phiên bản danh tính Duo. Cookie dùng HttpOnly/SameSite và Secure khi production. Thông tin thật không nằm trong client, Git hoặc bundle giao diện.
 
-MongoDB local dùng image chính thức ghim digest, chỉ mở cổng loopback và lưu `.local/mongo`. Lệnh `npm run mongo:stop` dừng dịch vụ nhưng giữ dữ liệu; `mongo:status` kiểm tra ping thực. Xem [hướng dẫn MongoDB](docs/mongodb.md). Khởi động API tự tạo indexes và seed shared content theo cách idempotent, không xóa tiến độ cá nhân. `npm run seed` có thể chạy lại an toàn.
+## Hành trình chung
 
-## Tính năng
+| Phần | Hành vi |
+| --- | --- |
+| Placement | Quick 15 hoặc Deep 30 câu Reading/Listening thích ứng; mỗi người làm riêng. Chỉ tạo lộ trình khi cả hai hoàn thành; band bắt đầu dùng **MIN**, không lấy trung bình. Lộ trình có các bậc 3.0–8.0, mỗi bậc 0.5. |
+| Band cá nhân | Giữ kết quả đầu vào và ước lượng cá nhân riêng. Làm lại placement hoặc luyện thêm không đặt lại hay tự nâng band chung. |
+| Buổi học | Mặc định 20 buổi mỗi band; có cấu hình số buổi theo band. Cả hai cùng danh sách nhưng hoàn thành theo thời gian riêng; backend yêu cầu bằng chứng bài đã nộp của đúng người. |
+| Duo Gate | Mặc định sau mỗi 5 buổi, có thể cấu hình 10. Cả hai hoàn thành chặng học trước Gate, rồi làm kiểm tra riêng. Hai kết quả đạt mới mở chặng sau; kết quả đạt của người trước được giữ khi người kia thi lại. |
+| Thi nâng band | Mở sau khi cả hai hoàn thành buổi học và tất cả Gate. Cả hai join, đang có mặt và Ready mới đếm ngược. Các kỹ năng dùng lịch/hạn nộp chung trên server; mất kết nối và tải lại không đặt lại thời gian. |
+| Kết quả nâng band | Mỗi người được chấm riêng. Chỉ khi cả hai đạt, backend đổi band chung đồng thời bằng cập nhật có kiểm tra revision; không lấy trung bình hai kết quả. Mục tiêu cuối là 8.0. |
+| Thi lại | Bảo lưu kết quả đạt. Người đã đạt có thể vào phòng với vai trò Companion để đồng hành khi người kia thi lại; chế độ strict có thể yêu cầu cả hai thi lại. |
+| Ôn tập | Ôn lại band đã mở và mở bất kỳ bài/đề thường trong kho mà không cần người kia online. Điểm luyện riêng không bỏ qua Duo Gate hoặc nâng band chung. |
 
-| Phần            | Hành vi                                                                                                                                                                |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hồ sơ           | Mục tiêu 3.0–7.0, ngày thi, Academic/GT, thời lượng học, tự đánh giá bốn kỹ năng có nhãn riêng                                                                         |
-| Đầu vào         | Quick 15 hoặc Deep 30 câu Reading/Listening thích ứng Rasch/MAP; chọn theo thông tin Fisher, không lặp trong một bài; lưu và tiếp tục sau reload                       |
-| Kho bài tập     | Tìm/lọc kỹ năng, chủ đề, CEFR, mục tiêu band, loại thi; có Reading, Listening, Writing, Speaking và grammar                                                            |
-| Reading         | Passage/câu hỏi MCQ, T/F/NG, Y/N/NG, matching, trả lời ngắn; chấm ở server, giải thích và evidence sau nộp                                                             |
-| Listening       | Bốn phần xã hội/học thuật, nhiều người nói, bẫy đính chính/phủ định; audio ElevenLabs khi cấu hình hoặc giọng đọc trình duyệt ghi rõ nguồn                             |
-| Writing         | Academic chart/GT letter và Task 2; số từ 150/250, lưu nháp MongoDB; hai tác nhân trích dẫn rồi chấm bốn tiêu chí; Task 2 trọng số gấp đôi                             |
-| Speaking        | Ba phần, ghi âm WAV PCM mono 16 kHz, nghe lại và lưu riêng bằng GridFS; Whisper nhận diện; SSE hiện tiến trình; Azure đo phát âm nếu được cấu hình                     |
-| Thi thử         | Reading 3 sections/40 câu/60 phút; Listening 4 parts/40 câu/30 phút; Writing 2 tasks/60 phút; Speaking 3 parts/12 phút; deadline do server lưu, không reset khi reload |
-| Từ vựng         | Kho từ theo nghĩa, IPA, nghĩa Việt/định nghĩa Anh, collocations, word families, ví dụ, lỗi thường gặp; flashcards FSRS thật, bốn mức Quên/Khó/Tốt/Dễ                   |
-| Lộ trình        | Kế hoạch tuần theo thời lượng và mục tiêu, ưu tiên kỹ năng cần bằng chứng, bài mới và từ đến hạn; đánh dấu hoàn thành                                                  |
-| Theo dõi        | Điểm kỹ năng từ các form khác nhau, đồ thị, thời gian hoạt động, lịch sử bài luyện/đầu vào, sổ lỗi và đề xuất tiếp theo                                                |
-| Dữ liệu cá nhân | Xuất JSON và xóa lịch sử của riêng mình; recording tải qua endpoint kiểm tra owner; không đưa API key ra trình duyệt                                                   |
+Mức đạt Gate mặc định 70% câu hỏi khách quan. Thi nâng band cần từng kỹ năng đạt mức band kế tiếp, tối đa 8.0; Writing/Speaking phải có kết quả AI hợp lệ, không đổi band từ checklist hoặc điểm tự khai báo. Trạng thái `pending-ai` giữ bài để chấm lại sau, không coi là đạt. Speaking cần âm thanh và bằng chứng âm học hợp lệ; chỉ cấu hình OpenAI hoặc nhập transcript không đảm bảo có điểm Speaking toàn kỹ năng.
 
-Các lần làm lại cùng form không tạo thêm bằng chứng độc lập để tăng điểm năng lực. Mỗi dữ liệu riêng đều truy vấn theo userId trong MongoDB; đây là cơ chế kiểm soát owner ở API, không gọi là PostgreSQL RLS. Session và drafts tồn tại qua khởi động lại API. Website dành cho một instance API và nhóm nhỏ; không tuyên bố đây là hệ thống thi có giám sát.
+## Luyện tập hằng ngày
 
-## Ngân hàng học liệu v3
+| Phần | Hành vi |
+| --- | --- |
+| Kho bài tập | Tìm/lọc kỹ năng, chủ đề, CEFR, band tới 8.0 và Academic/GT; mỗi người mở riêng. |
+| Reading | Passage, MCQ, T/F/NG, Y/N/NG, matching, chọn nhiều đáp án, completion, sơ đồ; server chấm, giải thích và evidence sau nộp. |
+| Listening | Bốn phần xã hội/học thuật, đối thoại và bẫy đính chính/phủ định; map/plan/diagram và completion; ElevenLabs khi cấu hình hoặc TTS trình duyệt ghi rõ nguồn. |
+| Writing | Academic line/bar/pie/table/map/process/mixed charts, GT letter, Task 2; lưu nháp; mỗi task có tiêu chí và Task 2 trọng số gấp đôi. |
+| Speaking | Ba parts, ghi âm WAV PCM mono 16 kHz, nghe lại, lưu riêng bằng GridFS; Whisper STT và Azure âm học khi được cấu hình. |
+| Thi thử thường | Reading 3 sections/40 câu/60 phút; Listening 4 parts/40 câu/30 phút; Writing 2 tasks/60 phút; Speaking 3 parts/khoảng 12 phút. Luôn mở riêng, deadline không reset qua reload. |
+| Từ vựng | Nghĩa Việt, định nghĩa Anh, IPA, collocations, ví dụ, word family, lỗi thường gặp; flashcards FSRS với bốn mức Quên/Khó/Tốt/Dễ. |
+| Theo dõi | Dashboard, điểm cá nhân, thời gian, lịch sử, sổ lỗi, đề xuất; kết quả Duo lưu mọi lượt thi và có API lịch sử phân trang theo owner. |
+| Dữ liệu | Xuất JSON riêng; audio chỉ đọc được bởi owner. Duo không cho xóa lịch sử bằng endpoint chung vì cần giữ bằng chứng và kết quả bảo lưu. |
 
-| Loại      | Lessons | Full mocks |
-| --------- | ------: | ---------: |
-| Reading   |     144 |         24 |
-| Listening |     144 |         24 |
-| Writing   |      72 |         12 |
-| Speaking  |      72 |         12 |
-| Grammar   |      48 |          0 |
-| **Tổng**  | **480** |     **72** |
+Hướng dẫn/đoạn mẫu cho bài advanced được hiển thị dưới mục thu gọn ở **Practice lesson band 7.5–8.0**. Exam và đánh giá Duo không hiển thị hướng dẫn đó. Các lượt làm lại cùng form không được coi là bằng chứng năng lực độc lập mới.
 
-Ngân hàng có **648 mục từ vựng**, **576 câu placement**, đủ A2/B1/B2/C1. Bản mở rộng theo `Tong_hop_cac_dang_bai_IELTS.docx` giữ nguyên ID của 160 bài luyện và 24 đề cũ, thêm 320 bài luyện và 48 đề mới. Các bài đọc và lời thoại của đề mới được viết riêng, với đáp án và dẫn chứng trong nguồn. Các đề cũ có tái sử dụng section của bài luyện và tiếp tục giữ tag provenance; dữ liệu cũ không bị xóa để làm mất lịch sử học.
+## Ngân hàng học liệu
 
-Writing có đủ line/bar/pie/table/map/process/mixed charts, thư General Training và sáu nhóm luận Task 2. Giao diện dùng dữ liệu biểu đồ, tọa độ, đường đi và các bước quy trình thực; hỗ trợ phóng to trên điện thoại. Reading/Listening có bố cục form/note/table/flow-chart/summary/sentence completion và chọn nhiều đáp án, chấm từng vị trí trong tổng 40 câu. Speaking gồm ba parts, câu hỏi cá nhân, cue card bốn ý và thảo luận mở rộng.
+| Loại | Baseline v3 | Sau bổ sung band 7.5–8.0 |
+| --- | ---: | ---: |
+| Bài luyện | 480 | **544** |
+| Đề mô phỏng | 72 | **84** |
+| Mục từ vựng | 648 | **744** |
+| Câu placement | 576 | **640** |
 
-`npm run audit:content` kiểm tra ID, đáp án, evidence, word limits và cấu trúc đầy đủ. `npm run audit:expansion` kiểm tra tổng gấp ba, phủ các dạng bài, chấm toàn bộ đáp án, độ dài đề và trùng/độ tương đồng văn bản. [Ghi chú ngân hàng](server/data/README.md) mô tả nguồn và giới hạn kiểm tra. Bản mở rộng mang `source: ai`, `quality: ai-unreviewed`; band/difficulty là ước lượng, chưa hiệu chuẩn tâm trắc hoặc thẩm định bởi giám khảo IELTS. Sinh thêm bài qua API dùng schema validation và critic trước khi lưu.
+Baseline v3 gồm Reading 144 bài/24 đề, Listening 144/24, Writing 72/12, Speaking 72/12 và Grammar 48 bài. Bản nâng cấp thêm **64 bài luyện, 12 đề, 96 mục từ và 64 câu placement**. Các ID v3 được giữ; seed chỉ thêm ID chưa có và giữ nguyên bản ghi đã tồn tại, kể cả nội dung được người học chỉnh/sinh riêng. Số thực tế trong MongoDB có thể cao hơn hoặc khác bộ seed nếu đã có nội dung riêng; `/api/health` báo số đang lưu.
 
-## Điểm luyện tập và AI
+`npm run audit:content` kiểm tra cấu trúc, đáp án, evidence, word limits; `npm run audit:expansion` đối chiếu baseline và độ phủ; `npm run audit:band8` kiểm tra phần mới. Nội dung advanced có passage/script tự viết, biểu đồ/bản đồ/sơ đồ dạng dữ liệu, mức khó và provenance riêng. Các kiểm tra này là kiểm tra cấu trúc và dữ liệu, **không chứng minh chuyên gia IELTS đã duyệt hoặc hiệu chuẩn tâm trắc**. Metadata vẫn ghi `source: ai`, `quality: ai-unreviewed`; difficulty/band là ước lượng. Xem [ghi chú ngân hàng](server/data/README.md).
 
-Mọi band hiển thị là **ước lượng luyện tập, không phải điểm thi chính thức**. Chỉ bài Reading/Listening đủ 40 câu mới quy đổi bằng bảng tham khảo; bài ngắn hiển thị số câu đúng và dẫn chứng, không suy band từ vài câu. Overall chỉ có khi đủ bốn điểm kỹ năng, làm tròn đúng ngưỡng .25/.75.
+## AI và điểm luyện tập
 
-Nếu chưa có OpenAI, Writing/Speaking trả thống kê/checklist với band `null`. Website không tự bịa điểm AI. Transcript riêng không đủ để đo phát âm hoặc tốc độ/khoảng dừng; Speaking không có điểm toàn kỹ năng khi thiếu bằng chứng âm thanh. Azure scores 0–100 cũng không phải bảng chuyển thẳng sang band IELTS. Provider đã cấu hình mà lỗi sẽ báo lỗi và giữ nháp/recording để thử lại.
+Mọi band là **ước lượng luyện tập, không phải điểm IELTS chính thức**. Reading/Listening chỉ dùng bảng tham khảo khi đủ form 40 câu; bài ngắn hiển thị raw score/evidence. Overall cần đủ bốn kỹ năng hợp lệ và dùng ngưỡng làm tròn .25/.75.
 
-TTS trình duyệt là giọng máy để tự luyện, không phải ElevenLabs và không xác nhận accent chuẩn. Trong Exam, giao diện ẩn transcript/hints và server chỉ cấp nguồn nghe một lần; nguồn đọc native vẫn có thể được người dùng kỹ thuật kiểm tra. Đây là mô phỏng thi để tự học, không phải cơ chế chống gian lận.
+Thiếu OpenAI: Writing/Speaking lưu bài, metrics/checklist và band `null`. Transcript không đủ để đo phát âm; Azure scores 0–100 không quy đổi trực tiếp thành band. Kết quả nâng band tiếp tục chờ nếu thiếu chấm AI/bằng chứng âm học; `POST /api/attempts/:id/regrade` chấm lại từ bài/bản ghi đã lưu của chính người đó. Lỗi provider giữ dữ liệu và trả lỗi để thử lại. Tests dùng transport/fixtures kiểm soát không chứng minh đã gọi nhà cung cấp live.
 
-## Cấu hình dịch vụ phía server
+TTS trình duyệt là giọng máy tự luyện, không phải ElevenLabs hay accent đã kiểm định. Exam ẩn transcript/hints và chỉ cấp nguồn nghe một lần; đây là mô phỏng tự học, không phải thi có giám sát hay chống gian lận tuyệt đối.
 
-Không điền khóa trong code, commit, biến frontend `VITE_*` hoặc chat. `.env.example` chỉ chứa giá trị trống cho credentials. Dùng secrets của nơi triển khai hoặc file `.env` riêng không theo dõi bởi Git.
+## Cấu hình server
 
-| Biến                                                                                   | Mục đích                                                                          |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `MONGODB_URI`                                                                          | URI MongoDB thật; local mặc định ở trên, production dùng database đã bảo vệ/TLS   |
-| `IELTS_OPENAI_API_KEY`                                                                 | OpenAI content, Writing/Speaking; alias local `OPENAI_API_KEY`                    |
-| `CONTENT_MODEL`, `EXTRACTOR_MODEL`, `SCORING_MODEL`                                    | Tách vai trò model, mặc định `gpt-4o`                                             |
-| `TRANSCRIPTION_MODEL`                                                                  | Whisper STT, mặc định `whisper-1`                                                 |
-| `ELEVENLABS_API_KEY`                                                                   | API tạo hội thoại; cần thêm ba voice IDs thực                                     |
-| `ELEVENLABS_VOICE_BRITISH`, `ELEVENLABS_VOICE_AMERICAN`, `ELEVENLABS_VOICE_AUSTRALIAN` | Voice IDs từ tài khoản ElevenLabs                                                 |
-| `ELEVENLABS_MODEL`                                                                     | Text-to-dialogue model, mặc định `eleven_v3`                                      |
-| `IELTS_AZURE_SPEECH_KEY`, `IELTS_AZURE_SPEECH_REGION`                                  | Đo phát âm; alias local `AZURE_SPEECH_KEY/REGION`                                 |
-| `APP_ORIGIN`                                                                           | Origin chính xác; bắt buộc HTTPS trong production                                 |
-| `TRUST_PROXY`                                                                          | `true` chỉ khi API đứng sau reverse proxy tin cậy                                 |
-| `DEMO_ENABLED`, `MAX_LEARNERS`                                                         | Mở hồ sơ demo và số tài khoản thật; production mặc định tắt demo nếu không đặt rõ |
+Không commit credentials hoặc dùng `VITE_*` cho secrets. `.env.example` có giá trị credentials trống; tệp riêng/kho secrets mới giữ giá trị thực.
 
-Đích mạng: `api.openai.com`, `api.elevenlabs.io`, `<region>.stt.speech.microsoft.com`, hostname MongoDB/Atlas tương ứng. Flags `/api/health` chỉ cho biết đã cấu hình, không xác minh kết nối live. Nhà cung cấp có thể thu phí; hiện giới hạn tạo bài AI năm lần/ngày/học viên. Chỉ đưa voice/region thực khi đã chọn ở tài khoản của bạn.
+| Biến | Mục đích |
+| --- | --- |
+| `MONGODB_URI` | URI MongoDB server thật; không in URI có credentials. |
+| `DUO_CREDENTIALS_FILE` / `DUO_ACCOUNTS_JSON` | Một nguồn cấu hình riêng, đúng hai tài khoản, hash-only; xem `docs/duo-auth.md`. |
+| `DUO_GATE_INTERVAL` | 5 hoặc 10, mặc định 5. |
+| `DUO_SESSIONS_PER_BAND`, `DUO_SESSIONS_BY_BAND` | Mặc định 20 buổi; override số buổi theo band bằng JSON server-owned. |
+| `DUO_PASS_PERCENT`, `DUO_STRICT_RETAKE_MODE` | Mặc định 70 và false; không nhận ngưỡng từ client. |
+| `IELTS_OPENAI_API_KEY` | OpenAI Writing/Speaking/content/STT; `OPENAI_API_KEY` là alias local. |
+| `CONTENT_MODEL`, `EXTRACTOR_MODEL`, `SCORING_MODEL`, `TRANSCRIPTION_MODEL` | Model có thể cấu hình; mặc định gpt-4o và whisper-1. |
+| `ELEVENLABS_API_KEY`, ba biến `ELEVENLABS_VOICE_*`, `ELEVENLABS_MODEL` | TTS nhiều nhân vật bằng voice IDs thực; mặc định model eleven_v3. |
+| `IELTS_AZURE_SPEECH_KEY`, `IELTS_AZURE_SPEECH_REGION` | Phân tích âm học; aliases local Azure được hỗ trợ. |
+| `APP_ORIGIN`, `TRUST_PROXY` | HTTPS origin chính xác và proxy tin cậy; bắt buộc origin khi production. |
+
+Duo là mặc định; production luôn dùng Duo. `DUO_ENABLED=false` chỉ dành cho kiểm tra hồi quy local của chế độ email/demo cũ, không cấu hình website production như vậy. Flags `/api/health` cho biết cấu hình provider, không xác minh kết nối/chất lượng live. Đích mạng gồm `api.openai.com`, `api.elevenlabs.io`, hostname speech theo region và hostname MongoDB đã cấu hình.
 
 ## Kiểm tra
 
 ```sh
 npm run typecheck
 npm run audit:content
+npm run audit:expansion
+npm run audit:band8
 npm test
+npm run build
 npx playwright install chromium
 npm run test:e2e
-npm run build
 ```
 
-Unit/API tests dùng MongoDB thật với database UUID riêng, bao gồm owner isolation, persistence, adaptive placement, FSRS, grading, timeout, drafts, SSE và GridFS recording vượt 16 MB. Test provider dùng transport kiểm soát, không coi là đã gọi API live. Browser tests dùng database riêng và Chromium desktop/mobile; `/usr/bin/chromium` được dùng nếu có, hoặc browser Playwright đã cài. Các cấu hình E2E có cổng riêng để không đụng phiên development đang chạy.
+Build trước browser tests vì fixture Duo phục vụ React từ `dist`. Tests dùng MongoDB thật trong namespace riêng, Chromium desktop/mobile và hai cookie jars cho Duo; cleanup chỉ xóa database test. Không dùng thông tin thật của hai người trong tests. Kiểm tra provider bằng transport kiểm soát không được gọi là đã kiểm chứng provider live. Kết quả cụ thể nằm trong [docs/validation.md](docs/validation.md).
 
-## Production
+## Cloud và VPS
 
-VPS có nhiều project: dùng [bộ triển khai riêng](deploy/README.md), với một cổng HTTPS đã kiểm tra trống, MongoDB/network/volume tách riêng và scripts kiểm tra trước khi chạy. Bộ cấu hình đã được kiểm tra Bash/Compose/nginx trong cloud; cần kết nối SSH và kiểm tra server đích trước khi gọi là đã triển khai.
+[docs/cloud-start.md](docs/cloud-start.md) mô tả setup/start lại cloud. Tiến trình đang chạy không tồn tại qua publish environment; cấu hình draft cần Review → Save → Publish. Localhost trong cloud không phải URL công khai.
 
-```sh
-npm ci
-npm run build
-NODE_ENV=production APP_ORIGIN=https://your-domain.example MONGODB_URI='your-secure-uri' npm start
-```
+VPS có nhiều project dùng [bộ cập nhật riêng](deploy/README.md); `deploy/update-duo.sh` đọc credentials hash-only qua stdin, ghim commit/SHA256, giới hạn tài nguyên build và chỉ chuyển app IELTS. MongoDB, nguồn cũ, học liệu đã có và cấu hình các website khác được đối chiếu; không rollback/xóa dữ liệu sau khi bản mới có thể đã ghi. URL đã triển khai trước đó là `https://sutonghanyu.vn`; việc bản Duo đã chạy tại đó cần kết quả updater và kiểm tra live, không suy từ build cloud.
 
-Express phục vụ cả `dist` và API ở một port; TLS được cung cấp bởi hosting/reverse proxy. Không đưa URI thật có mật khẩu vào câu lệnh ghi lịch sử shell: khi triển khai, nhập qua secrets và chạy `npm start`. `Dockerfile` dựng image Node.js và frontend, chạy bằng user `node`; cấp MongoDB URI và HTTPS origin qua cấu hình hosting. Container app không tự tạo MongoDB; local Mongo Compose là tiện ích development.
-
-Cloud environment đã có Node và MongoDB/Docker được kiểm tra. Cấu hình install/start được lưu riêng để tái sử dụng; các tiến trình phải khởi động lại ở phiên mới. Đây chưa phải bản triển khai public: URL công khai cần hosting cho API và MongoDB cùng cấu hình domain/secrets.
-
-Hướng dẫn khởi động lại cloud và script thiết lập: [docs/cloud-start.md](docs/cloud-start.md). Dockerfile được cung cấp cho hosting có truy cập npm; build container trong cloud này chưa xác minh được do DNS của container không truy cập được npm registry. Build Node/Vite và các kiểm tra trình duyệt dùng MongoDB thực chạy trực tiếp trong workspace.
+Production dùng Node hosting hoặc Dockerfile, HTTPS `APP_ORIGIN` và MongoDB được bảo vệ. Express phục vụ cả `dist` và API cùng một port; reverse proxy cung cấp TLS. Không tắt TLS/checksums để xử lý lỗi tải dependency. Xem [MongoDB](docs/mongodb.md) và [triển khai](deploy/README.md).

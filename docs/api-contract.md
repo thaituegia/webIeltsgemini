@@ -1,43 +1,75 @@
 # API contract
 
-All paths are under `/api`. JSON requests use `Content-Type: application/json`. Authentication uses an HttpOnly cookie; never store passwords or tokens in localStorage. Error body: `{ error: string }`, relevant HTTP status. Public types are in `shared/types.ts`. Every personal query is scoped to the signed-in owner in MongoDB.
+All paths are under `/api`. JSON bodies use `Content-Type: application/json`; authentication uses an HttpOnly cookie. Do not store tokens or passwords in localStorage. Errors use `{error:string}` and an HTTP status. Shared types are in `shared/types.ts` and `shared/duo.ts`. Personal reads/writes use the authenticated owner, never a client-provided user ID.
 
-| Method/path                        | Body/query                                                             | Response                                                                                           |
-| ---------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --- | ---------------------------------- |
-| GET health                         | —                                                                      | `Health`                                                                                           |
-| GET auth/me                        | —                                                                      | `{user: Profile                                                                                    | null}`                                                            |
-| POST auth/demo                     | `{learner:1                                                            | 2}`                                                                                                | `{user}`                                                          |
-| POST auth/register                 | `{name,email,password,targetBand,testType,examDate?,weeklyMinutes?}`   | `{user}`                                                                                           |
-| POST auth/login                    | `{email,password}`                                                     | `{user}`                                                                                           |
-| POST auth/logout                   | —                                                                      | `{ok:true}`                                                                                        |
-| PATCH profile                      | `{name?,targetBand?,testType?,examDate?,weeklyMinutes?,dailyMinutes?}` | `{user}`                                                                                           |
-| GET dashboard                      | —                                                                      | `Dashboard`                                                                                        |
-| GET content                        | `skill?,topic?,band?,testType?,format?,q?,page?`                       | `LibraryResult`                                                                                    |
-| GET content/:id                    | —                                                                      | `{content:ContentItem}`                                                                            |
-| POST content/generate              | `{skill,band,topic,testType}`                                          | `{content}`; missing AI key → 503                                                                  |
-| POST content/:id/audio             | —                                                                      | Audio bytes from configured ElevenLabs; missing provider → 503                                     |
-| POST attempts                      | `{contentId,mode:'practice'                                            | 'exam'}`                                                                                           | `{attempt:Attempt}`; resume existing unfinished same mode/content |
-| GET attempts                       | `skill?,status?`                                                       | `{attempts:AttemptSummary[]}`                                                                      |
-| GET attempts/:id                   | —                                                                      | `{attempt}`                                                                                        |
-| PATCH attempts/:id                 | `{responses?,essays?,transcript?,durationSeconds?}`                    | `{attempt}`; merge keyed responses/essays                                                          |
-| POST attempts/:id/submit           | —                                                                      | `{attempt}` with stored feedback                                                                   |
-| POST attempts/:id/listening-source | —                                                                      | `{sections,source:'browser-tts',notice}`; authenticated native TTS source; exam allows one request |
-| POST attempts/:id/speaking         | Multipart `audio?`, `transcript?`                                      | JSON `{attempt}` or SSE with `Accept:text/event-stream`                                            |
-| GET attempts/:id/audio             | —                                                                      | Private recording bytes; only owner                                                                |
-| GET placement/active               | —                                                                      | `{placement:PlacementState                                                                         | null}`                                                            |
-| GET placement/history              | —                                                                      | `{placements:PlacementSummary[]}`; only owner's previous diagnostics                               |
-| POST placement/start               | `{mode:'quick'                                                         | 'deep'}`                                                                                           | `{placement}`; quick 15/deep 30; resume active                    |
-| POST placement/:id/answer          | `{questionId,answer}`                                                  | `{placement}`                                                                                      |
-| GET vocabulary/bank                | `q?,topic?,cefr?,page?`                                                | `{items:VocabularyEntry[],total:number}`                                                           |
-| GET vocabulary/cards               | —                                                                      | `{cards:VocabularyCard[],dueCount:number}`                                                         |
-| POST vocabulary/cards              | `{vocabularyId}` OR `{word,meaning,example?,cefr?,topic?}`             | `{card}` (idempotent save)                                                                         |
-| POST vocabulary/cards/:id/review   | `{rating:1                                                             | 2                                                                                                  | 3                                                                 | 4}` | `{card}` with actual FSRS schedule |
-| GET plan                           | —                                                                      | `{plan:StudyPlan}`                                                                                 |
-| PATCH plan/tasks/:id               | `{completed:boolean}`                                                  | `{plan}`                                                                                           |
-| GET errors                         | —                                                                      | `ErrorNotebook`                                                                                    |
-| GET account/export                 | —                                                                      | Owner-only JSON data download                                                                      |
-| DELETE account/history             | `{confirm:true}`                                                       | `{ok:true}`; deletes only owner's learning records, preserves account/profile                      |
+## Authentication and ordinary practice
 
-SSE speaking events: `event: progress\ndata: {"stage":"transcribing|pronunciation|evaluating|saving", "transcript"?:"..."}\n\n`, final `event: result\ndata: {"attempt": Attempt}\n\n`; errors `event:error\ndata:{"error":"..."}\n\n`.
+Duo is the default and production mode. Only the two private configured phone identities can authenticate; names and the shared target 8.0 are fixed. Original phone numbers, names and password hashes belong only in private server configuration, not examples, source or frontend bundles. Legacy email/demo mode is explicitly disabled in production and exists only for isolated regression tests.
 
-Practice and exam attempts retain MongoDB drafts and deadlines. Exam responses hide listening transcripts and hints until submission. Answer keys/evidence never appear in public content before grading. `estimatedBand:null` is correct for short objective drills and offline Writing/Speaking; raw score and coaching still display. Full 40-item Reading/Listening forms get explicitly indicative reference conversion. Mock content is original, uncalibrated and not claimed reviewed by an IELTS examiner.
+| Method/path | Request | Response/behavior |
+| --- | --- | --- |
+| GET health | — | `Health`; actual Mongo counts, `duoEnabled:true`, `authMode:'phone'`, `demoEnabled:false`, provider configuration flags. |
+| GET auth/me | — | `{user:Profile}` or `{user:null}`; authenticated profile includes own phone/name/role. |
+| POST auth/login | `{phone,password}` | `{user}`; normalize valid Vietnamese phone input; generic 401 for invalid identity/password. |
+| POST auth/logout | — | `{ok:true}`; clears own session/cookie. |
+| POST auth/register | Any | 403 in Duo; no third account registration. |
+| POST auth/demo | Any | 403 in Duo. Email login also unavailable in Duo. |
+| PATCH profile | `{name?,targetBand?,testType?,examDate?,weeklyMinutes?,dailyMinutes?,selfAssessment?}` | `{user}`; unchanged fixed name/target accepted; changing fixed identity or target away from 8 rejected. Personal timing, date/type and self-assessment up to 8 are editable. |
+| GET dashboard | — | `Dashboard`; personal learning metrics, independent of the shared-band decision. |
+| GET content | `skill?,topic?,band?,cefr?,testType?,format?,q?,page?,pageSize?` | `LibraryResult`; ordinary catalog is independently accessible, including band 7.5/8.0. |
+| GET content/:id | — | `{content:ContentItem}`; public content has no answer keys. |
+| POST content/generate | `{skill,band,topic,testType}` | `{content}`; band up to 8.0, missing provider → 503. |
+| POST content/:id/audio | — | Audio from configured ElevenLabs; missing provider → 503. |
+| POST attempts | `{contentId,mode,duoAssessmentId?}` | `{attempt:Attempt}`. `mode` is `practice` or `exam`. Ordinary practice/mock works alone. Assessment context is server-validated and must use Exam. Reuses a compatible own unfinished attempt; ordinary attempts cannot become qualifying Duo attempts. |
+| GET attempts | `skill?,status?` | `{attempts:AttemptSummary[]}`; own attempts only. |
+| GET attempts/:id | — | `{attempt}`; another person's ID returns 404. |
+| PATCH attempts/:id | `{responses?,essays?,transcript?,durationSeconds?}` | `{attempt}`; merge drafts, immutable after submission. |
+| POST attempts/:id/submit | — | `{attempt}` with stored feedback; valid Duo linkage reconciles own assessment and shared progress. |
+| POST attempts/:id/regrade | — | Own submitted Duo Writing/Speaking only. Reuses saved essays/private recording; requires real provider configuration. Missing AI → 503, conflicting grading → 409; no client-supplied score accepted. |
+| POST attempts/:id/listening-source | — | `{sections,source:'browser-tts',notice}`; Exam allows one request and hides text in normal view. |
+| POST attempts/:id/speaking | Multipart `audio?`, `transcript?` | JSON `{attempt}` or SSE with `Accept:text/event-stream`; saves own recording and grading results. |
+| GET attempts/:id/audio | — | Private recording bytes after owner check. |
+| GET placement/active | — | `{placement:PlacementState}` or `{placement:null}`. |
+| GET placement/history | — | `{placements:PlacementSummary[]}` for the owner. |
+| POST placement/start | `{mode:'quick'}` or `{mode:'deep'}` | `{placement}`; 15/30 adaptive items; resume active diagnostic. |
+| POST placement/:id/answer | `{questionId,answer}` | `{placement}`; valid completed result syncs Duo placement, preserving any existing shared path. |
+| GET vocabulary/bank | `q?,topic?,cefr?,page?,pageSize?` | `{items:VocabularyEntry[],total:number}`. |
+| GET vocabulary/cards | — | `{cards:VocabularyCard[],dueCount:number}`. |
+| POST vocabulary/cards | `{vocabularyId}` or `{word,meaning,example?,cefr?,topic?}` | `{card}`; idempotent owner save. |
+| POST vocabulary/cards/:id/review | `{rating:1}` through `{rating:4}` | `{card}` with real FSRS scheduling. |
+| GET plan | — | `{plan:StudyPlan}` for legacy/personal recommendations; never a source of Duo unlock authority. |
+| PATCH plan/tasks/:id | `{completed:boolean}` | Legacy task status only; cannot bypass Duo lesson proof, Gate or promotion. |
+| GET errors | — | `ErrorNotebook` owned by the current learner. |
+| GET account/export | — | Owner-only profile, attempts, placement, cards, plans and recording metadata; Duo assessment history is exposed by its own owner-scoped endpoint. |
+| DELETE account/history | `{confirm:true}` | 409 in Duo to preserve qualifying evidence and retained results. |
+
+## Shared Duo learning path
+
+All Duo endpoints require one of the configured identities. A request cannot set members, band, threshold, scores, readiness of another person or curriculum. Two completed placements create one shared path at `MIN(A,B)`, restricted to half-band steps from 3.0 to 8.0. New placement estimates do not reset the path. Default curriculum is 20 sessions/band, Gate every 5 sessions; server configuration can choose 10 or vary session count per band.
+
+| Method/path | Request | Response/behavior |
+| --- | --- | --- |
+| GET duo | — | `{duo:DuoSnapshot}`; `path:null` until both placements; shared/current/target separate from individual estimates; both members' aggregate completion/results but only own assessment list. |
+| GET duo/history | `page?,pageSize?` | `DuoHistoryResult`; owner-scoped paginated complete assessment history, `total`, pagination and `serverNow`. |
+| POST duo/lessons/:id/complete | `{attemptId}` or server-curriculum vocabulary `{cardIds}` | `{duo}`; lesson must be unlocked and proof owned, submitted and valid. Objective lessons need at least 80% of slots answered; Writing every required task at 150/250 words; Speaking sufficiently substantive text or owned saved recording. |
+| POST duo/gates/:id/start | — | `{assessment:DuoAssessmentView}`; both finish preceding sessions; independent Gate attempts. Already passed results are retained, failures may retry. |
+| GET duo/assessments/:id | — | `{assessment}` for the owner; reconciles server feedback, never exposes partner responses. States: `in-progress`, `pending-ai`, `passed`, `failed`. |
+| POST duo/rooms | — | 201 `{room:DuoRoomView}`; requires complete band curriculum and all Gates passed; opens/reuses current band's room. |
+| GET duo/rooms/:id | — | `{room}`; member presence/readiness, server countdown and deadline; no partner answers. |
+| POST duo/rooms/:id/join | — | `{room}`; joins only the signed-in member. |
+| POST duo/rooms/:id/heartbeat | — | `{room}`; refreshes own presence. Frontend uses 10-second heartbeat while participating. |
+| POST duo/rooms/:id/ready | `{ready:boolean,companion?:boolean}` | `{room}`; both live and Ready start server countdown. Companion is allowed only for a retained pass and non-strict mode. |
+| POST duo/rooms/:id/leave | — | `{room}`; clears own readiness/presence; pre-start countdown cannot proceed with one absent person. |
+| POST duo/rooms/:id/start | — | `{room,assessment,companion}`; only after legitimate two-member Ready/countdown. Companion has `assessment:null`; others receive separate assessment IDs. Rejoining cannot reset time. |
+
+Promotion parts expose `startsAt`/`deadlineAt`, with a shared server schedule; later sections cannot start before their time or before previous work is submitted. Lost connection after legitimate start does not discard saved work or cancel the partner's ongoing attempt. Only two valid passes change `Shared Current Band` atomically; one pass waits and is retained for the next joint retake. Shared band remains capped at 8.0. Gate results never change band.
+
+A `pending-ai` Writing/Speaking result means submitted work is saved but has no valid final band. Missing AI/acoustic evidence cannot promote either person. Speaking requires real audio-derived evidence; OpenAI text feedback alone is insufficient. The regrade endpoint reuses owned saved work when services are available.
+
+## Grading and data limits
+
+SSE Speaking sends `progress` with the transcription/pronunciation/evaluation/saving stage, final `result` with `{attempt}`, or `error` with `{error}`. Drafts, deadlines, recordings and all assessment histories persist in MongoDB. Answer keys/evidence never appear in public content before grading. Practice-only advanced lesson guides are hidden during Exam and Duo assessment.
+
+`estimatedBand:null` is correct for short objective drills and ungraded Writing/Speaking. Full 40-item Reading/Listening forms use indicative reference conversion. The bank contains original, unreviewed content; structural checks do not establish IELTS examiner review or psychometric calibration.
+
+The generated seed contains 544 lessons, 84 mocks, 744 vocabulary entries and 640 placement items. Seed adds only missing IDs and preserves existing/custom-edited documents; actual `/health` totals can differ when a database already contains personal content. Deployment verification distinguishes newly inserted seed documents from preserved pre-existing records.

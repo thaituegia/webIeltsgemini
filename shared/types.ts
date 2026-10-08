@@ -94,8 +94,12 @@ export interface Profile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  duoRole?: "husband" | "wife";
+  duoId?: string;
   demo: boolean;
   currentBand: number | null;
+  personalEstimatedBand?: number | null;
   targetBand: number;
   testType: TestType;
   examDate: string | null;
@@ -263,6 +267,7 @@ export interface Feedback {
 }
 export interface Attempt {
   id: string;
+  duoAssessmentId?: string;
   contentId: string;
   title: string;
   skill: ContentKind;
@@ -373,6 +378,8 @@ export interface Health {
   status: "ok";
   database: "mongodb";
   demoEnabled: boolean;
+  duoEnabled?: boolean;
+  authMode?: "phone" | "email";
   services: { openai: boolean; elevenlabs: boolean; azure: boolean };
   bank: {
     lessons: number;

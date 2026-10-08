@@ -53,6 +53,7 @@ import {
   skillNames,
 } from "./components";
 import { LearningIllustration } from "./App";
+import { DuoDashboardCard } from "./Duo";
 
 const skillIcons = {
   reading: BookOpen,
@@ -123,7 +124,7 @@ export function DashboardPage() {
         description="Một buổi học tập trung hôm nay. Một bước gần hơn đến mục tiêu."
         action={
           <Link to="/plan" className="button secondary small">
-            Lộ trình của tôi
+            Lộ trình của hai người
             <ArrowUpRight size={16} />
           </Link>
         }
@@ -142,7 +143,7 @@ export function DashboardPage() {
           <p>
             {user.currentBand == null
               ? "Bắt đầu với bài kiểm tra đầu vào để hiểu điểm mạnh và điều bạn cần luyện tiếp theo."
-              : "Lộ trình điều chỉnh theo mục tiêu, thời gian và kết quả học thực tế của bạn."}
+              : "Cùng theo một band chung, luyện tập riêng theo nhịp của bạn và cùng thi nâng band."}
           </p>
           <Link
             className="button light"
@@ -173,6 +174,7 @@ export function DashboardPage() {
           </div>
         </div>
       </section>
+      <DuoDashboardCard />
       <div className="stats-grid">
         <Stat
           icon={<Target size={20} />}
@@ -504,7 +506,7 @@ export function PlanPage() {
     <div className="stack page-stack">
       <PageHeader
         eyebrow="HỌC ĐÚNG ĐIỀU BẠN CẦN"
-        title="Lộ trình của tôi"
+        title="Lộ trình của hai người"
         description="Từng buổi học nhỏ, cùng hướng về một mục tiêu lớn."
         action={
           <Link className="button secondary" to="/settings">
@@ -1417,8 +1419,12 @@ export function SettingsPage() {
       const result = await api<{ user: Profile }>("/profile", {
         method: "PATCH",
         body: json({
-          name: String(form.get("name")),
-          targetBand: Number(form.get("targetBand")),
+          name:
+            health?.duoEnabled === false ? String(form.get("name")) : user.name,
+          targetBand:
+            health?.duoEnabled === false
+              ? Number(form.get("targetBand"))
+              : user.targetBand,
           testType: String(form.get("testType")),
           examDate: form.get("examDate") ? String(form.get("examDate")) : null,
           weeklyMinutes: Number(form.get("weeklyMinutes")),
@@ -1501,23 +1507,43 @@ export function SettingsPage() {
           <div className="grid-2">
             <label className="field">
               Tên của bạn
+              {health?.duoEnabled === false ? (
+                <input
+                  name="name"
+                  defaultValue={user.name}
+                  required
+                  minLength={2}
+                  maxLength={80}
+                />
+              ) : (
+                <input name="name" value={user.name} readOnly disabled />
+              )}
+            </label>
+            <label className="field">
+              {health?.duoEnabled === false ? "Email" : "Số điện thoại"}
               <input
-                name="name"
-                defaultValue={user.name}
-                required
-                minLength={2}
-                maxLength={80}
+                value={
+                  health?.duoEnabled === false ? user.email : user.phone || ""
+                }
+                disabled
+                readOnly
               />
+              <small>
+                {health?.duoEnabled === false
+                  ? "Email tài khoản hiện tại"
+                  : "Số điện thoại đăng nhập"}
+              </small>
             </label>
             <label className="field">
-              Email
-              <input value={user.email} disabled readOnly />
-              <small>Email tài khoản hiện tại</small>
-            </label>
-            <label className="field">
-              Mục tiêu band
-              <select name="targetBand" defaultValue={user.targetBand}>
-                {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7].map((value) => (
+              {health?.duoEnabled === false
+                ? "Mục tiêu band"
+                : "Mục tiêu band chung"}
+              <select
+                name="targetBand"
+                defaultValue={user.targetBand}
+                disabled={health?.duoEnabled !== false}
+              >
+                {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].map((value) => (
                   <option value={value} key={value}>
                     {value.toFixed(1)}
                   </option>
@@ -1590,11 +1616,13 @@ export function SettingsPage() {
                       defaultValue={user.selfAssessment?.[skill] ?? ""}
                     >
                       <option value="">Chưa biết</option>
-                      {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7].map((band) => (
-                        <option key={band} value={band}>
-                          {band.toFixed(1)}
-                        </option>
-                      ))}
+                      {[3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8].map(
+                        (band) => (
+                          <option key={band} value={band}>
+                            {band.toFixed(1)}
+                          </option>
+                        ),
+                      )}
                     </select>
                   </label>
                 ),
@@ -1677,14 +1705,16 @@ export function SettingsPage() {
             <Download size={17} />
             {busy === "export" ? "Đang tải…" : "Xuất dữ liệu JSON"}
           </Button>
-          <Button
-            className="danger secondary"
-            disabled={!!busy}
-            onClick={() => setConfirm(true)}
-          >
-            <Trash2 size={17} />
-            Xóa lịch sử học
-          </Button>
+          {health?.duoEnabled === false && (
+            <Button
+              className="danger secondary"
+              disabled={!!busy}
+              onClick={() => setConfirm(true)}
+            >
+              <Trash2 size={17} />
+              Xóa lịch sử học
+            </Button>
+          )}
         </div>
       </Card>
       {confirm && (

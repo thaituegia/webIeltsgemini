@@ -1,0 +1,427 @@
+#!/usr/bin/env bash
+# Scoped Duo application update. Private HASH-ONLY credentials are supplied on
+# stdin; they are never downloaded from Git, printed or placed in build context.
+# Never replaces MongoDB, proxy, gateway, certificates or firewall rules.
+set -Eeuo pipefail
+umask 077
+say() { printf '\n%s\n' "$*"; }
+die() { printf '\nDỪNG: %s\n' "$*" >&2; exit 1; }
+usage() { printf '%s\n' 'Usage: bash update-duo.sh LIVE_DIR SOURCE_COMMIT ARCHIVE_SHA256 [--check] < PRIVATE_HASHED_CREDENTIALS_JSON' >&2; exit 2; }
+(( $# == 3 || $# == 4 )) || usage
+live_dir="$1"; source_commit="$2"; archive_sha256="$3"
+[[ $# == 3 || "$4" == --check ]] || usage
+[[ "$source_commit" =~ ^[a-f0-9]{40}$ && "$archive_sha256" =~ ^[a-f0-9]{64}$ ]] || usage
+[[ "$live_dir" =~ ^/[A-Za-z0-9._/-]+$ && -d "$live_dir" && ! -L "$live_dir" ]] || usage
+(( EUID == 0 )) || die 'Chạy trong phiên SSH VPS bằng root; không chạy trên PC.'
+for required in docker python3 curl sha256sum awk readlink stat mktemp date sort comm cmp ss df getconf systemctl nginx flock cp chmod mkdir mv rm wc; do
+  command -v "$required" >/dev/null || die "Thiếu $required; không tự cài hoặc nâng cấp hệ thống."
+done
+[[ "$(readlink -e -- "$live_dir")" == "$live_dir" && "$(stat -c '%u' "$live_dir")" == 0 ]] || die 'Thư mục live phải là đường dẫn thật do root sở hữu.'
+private_dir="$live_dir/.local/deploy"
+[[ "$(readlink -e -- "$private_dir")" == "$private_dir" && "$(stat -c '%u' "$private_dir")" == 0 ]] || die 'Thư mục private deploy bị thiếu hoặc chuyển hướng.'
+config_file="$private_dir/deploy.env"; compose_file="$live_dir/deploy/compose.yaml"
+compose_wrapper="$live_dir/deploy/compose.sh"; domain_override="$private_dir/domain.compose.yaml"
+release_override="$private_dir/release.compose.yaml"
+for file in "$config_file" "$compose_file" "$compose_wrapper" "$domain_override" "$private_dir/app.env" "$live_dir/deploy/nginx.conf" "$private_dir/tls/site.crt"; do
+  [[ -f "$file" && ! -L "$file" && "$(readlink -e -- "$file")" == "$file" && "$(stat -c '%u' "$file")" == 0 ]] || die 'Thiếu file triển khai thật/root-owned, hoặc có symlink không được phép.'
+done
+[[ "$(readlink -e -- "$private_dir/tls")" == "$private_dir/tls" ]] || die 'TLS upstream bị chuyển hướng.'
+if [[ -e "$release_override" || -L "$release_override" ]]; then
+  [[ -f "$release_override" && ! -L "$release_override" && "$(stat -c '%u' "$release_override")" == 0 ]] || die 'Release override không phải file thật do root sở hữu.'
+fi
+read_setting() { awk -F= -v ielts_key="$1" '$1==ielts_key{n++;value=substr($0,index($0,"=")+1);sub(/\r$/,"",value)}END{if(n!=1)exit 1;print value}' "$config_file"; }
+project="$(read_setting IELTS_COMPOSE_PROJECT)" || die 'Compose project thiếu hoặc bị lặp.'
+public_host="$(read_setting IELTS_PUBLIC_HOST)" || die 'Thiếu địa chỉ IP đã triển khai.'
+public_port="$(read_setting IELTS_PUBLIC_PORT)" || die 'Thiếu cổng HTTPS IP.'
+[[ "$project" =~ ^website-ielts-ai-[a-z0-9][a-z0-9_-]{0,47}$ && "$public_host" == 66.42.62.123 && "$public_port" == 8088 ]] || die 'Metadata không khớp website IELTS đã triển khai; không ghi đè project khác.'
+domain='sutonghanyu.vn'; origin="https://$domain"; loopback_port=19088
+base_args=(--project-name "$project" --env-file "$config_file" -f "$compose_file" -f "$domain_override")
+old_args=("${base_args[@]}")
+if [[ -f "$release_override" ]]; then old_args+=(-f "$release_override"); fi
+current_args=("${old_args[@]}")
+private_mode="$(stat -c '%a' "$private_dir")"
+[[ "$private_mode" =~ ^[0-7]{3,4}$ ]] && (( (8#$private_mode & 0077) == 0 )) || die 'Thư mục private deploy cần chặn truy cập của group/other.'
+docker info >/dev/null 2>&1 || die 'Docker chưa hoạt động; không restart Docker.'
+docker compose version >/dev/null 2>&1 || die 'Thiếu Compose v2; không nâng cấp dùng chung.'
+docker compose "${old_args[@]}" config --quiet || die 'Compose hiện tại không hợp lệ.'
+old_source_dir="$(docker compose "${old_args[@]}" config --format json | python3 -c 'import json,sys;x=json.load(sys.stdin);print(x["services"]["app"]["build"]["context"])')" || die 'Không đọc được build context cũ.'
+[[ "$old_source_dir" =~ ^/[A-Za-z0-9._/-]+$ && "$(readlink -e -- "$old_source_dir")" == "$old_source_dir" && "$(stat -c '%u' "$old_source_dir")" == 0 ]] || die 'Build context cũ không phải đường dẫn thật/root-owned.'
+[[ "$old_source_dir" == "$live_dir" || "$old_source_dir" == "$live_dir/.local/releases/"* ]] || die 'Build context cũ nằm ngoài source của project này.'
+if [[ -f "$release_override" ]]; then
+  python3 - "$project" "$config_file" "$compose_file" "$domain_override" "$release_override" "$old_source_dir" "$private_dir/app.env" <<'PYRELEASE' || die 'Release cũ chứa thay đổi ngoài image/source và đăng nhập Duo; cần kiểm tra riêng.'
+import json,os,stat,subprocess,sys
+project,env,base,domain,release,old_source,app_env=sys.argv[1:]
+args=['docker','compose','--project-name',project,'--env-file',env,'-f',base,'-f',domain]
+def read(extra,unresolved=False):
+ x=subprocess.run(args+extra+['config','--format','json']+(['--no-env-resolution'] if unresolved else []),capture_output=True,text=True,timeout=30);assert x.returncode==0;return json.loads(x.stdout)
+a,b=read([]),read(['-f',release])
+before,after=read([],True),read(['-f',release],True)
+def files(data):
+ return [entry['path'] if isinstance(entry,dict) else entry for entry in data['services']['app'].get('env_file',[])]
+assert files(before)==[app_env]
+extra=files(after)
+if extra!=[app_env]:
+ duo_env=os.path.join(os.path.dirname(old_source),'duo.env')
+ assert extra==[app_env,duo_env] and os.path.realpath(duo_env)==duo_env
+ metadata=os.lstat(duo_env)
+ assert stat.S_ISREG(metadata.st_mode) and metadata.st_uid==0 and stat.S_IMODE(metadata.st_mode)==0o600 and 0<metadata.st_size<=32768
+ values=b['services']['app']['environment']
+ assert values.get('DUO_ENABLED')=='true' and not values.get('DUO_CREDENTIALS_FILE')
+ settings=json.loads(values['DUO_ACCOUNTS_JSON'].replace('$$','$'))
+ assert isinstance(settings,dict) and isinstance(settings.get('accounts'),list) and len(settings['accounts'])==2
+for data in (a,b):
+ app=data['services']['app'];app.pop('image',None);app['build'].pop('context',None)
+ for key in ['DUO_ENABLED','DUO_ACCOUNTS_JSON','DUO_CREDENTIALS_FILE']:app.get('environment',{}).pop(key,None)
+assert a==b
+PYRELEASE
+fi
+up_help="$(docker compose up --help)"
+for option in --wait --wait-timeout; do
+  printf '%s\n' "$up_help" | awk -v ielts_option="$option" '$1==ielts_option{ok=1}END{exit !ok}' || die "Compose thiếu $option."
+done
+build_help="$(DOCKER_BUILDKIT=0 docker build --help 2>/dev/null)"
+for option in --memory --memory-swap --cpu-period --cpu-quota; do
+  [[ "$build_help" == *"$option "* ]] || die "Docker không hỗ trợ giới hạn build $option."
+done
+[[ "$(docker info --format '{{.MemoryLimit}} {{.CPUCfsQuota}} {{.CPUCfsPeriod}} {{.SwapLimit}}')" == 'true true true true' ]] || die 'Kernel/Docker thiếu giới hạn RAM/CPU/swap; không build không giới hạn.'
+available_kib="$(awk '/^MemAvailable:/{print $2}' /proc/meminfo)"
+[[ "$available_kib" =~ ^[0-9]+$ ]] && (( available_kib >= 2 * 1024 * 1024 )) || die 'Cần ít nhất 2 GiB RAM khả dụng để bảo vệ các project khác.'
+docker_root="$(docker info --format '{{.DockerRootDir}}')"
+for disk_path in "$live_dir" "$docker_root"; do
+  disk_kib="$(df -Pk "$disk_path" | awk 'NR==2{print $4}')"
+  [[ "$disk_kib" =~ ^[0-9]+$ ]] && (( disk_kib >= 8 * 1024 * 1024 )) || die 'Cần ít nhất 8 GiB trống tại nguồn và kho Docker.'
+done
+cpu_count="$(getconf _NPROCESSORS_ONLN)"; cpu_load="$(awk '{print $1}' /proc/loadavg)"
+[[ "$cpu_count" =~ ^[1-9][0-9]*$ && "$cpu_load" =~ ^[0-9]+([.][0-9]+)?$ ]] || die 'Không đọc được tải CPU.'
+[[ "$(awk -v ielts_load_average="$cpu_load" -v ielts_cpu_count="$cpu_count" 'BEGIN{print(ielts_load_average<ielts_cpu_count*0.8?"ready":"busy")}')" == ready ]] || die 'Server đang bận; chưa build hoặc dừng app.'
+nginx_pid="$(systemctl show nginx.service --property=MainPID --value)"
+[[ "$nginx_pid" =~ ^[1-9][0-9]*$ && "$(systemctl is-active nginx.service)" == active ]] || die 'Host gateway chưa hoạt động; không sửa hoặc restart.'
+nginx -t >/dev/null 2>&1 || die 'Nginx hiện tại không qua kiểm tra; chưa thay đổi app.'
+service_id() { docker ps -q --no-trunc --filter "label=com.docker.compose.project=$project" --filter "label=com.docker.compose.service=$1"; }
+old_app_id="$(service_id app)"; mongo_id="$(service_id mongo)"; proxy_id="$(service_id proxy)"
+for id in "$old_app_id" "$mongo_id" "$proxy_id"; do [[ "$id" =~ ^[a-f0-9]{64}$ ]] || die 'Cần đúng một app, MongoDB và proxy của project đang chạy.'; done
+old_image="$(docker inspect --format '{{.Image}}' "$old_app_id")"
+old_image_ref="$(docker inspect --format '{{.Config.Image}}' "$old_app_id")"
+[[ "$old_image" =~ ^sha256:[a-f0-9]{64}$ && "$(docker image inspect --format '{{.Id}}' "$old_image_ref")" == "$old_image" ]] || die 'Tag image hiện tại không khớp app đang chạy.'
+current_origin="$(docker inspect --format '{{range .Config.Env}}{{if eq (index (split . "=") 0) "APP_ORIGIN"}}{{println (index (split . "=") 1)}}{{end}}{{end}}' "$old_app_id")"
+[[ "$current_origin" == "$origin" ]] || die 'APP_ORIGIN không khớp tên miền đã được cấu hình.'
+docker inspect "$old_app_id" "$mongo_id" "$proxy_id" | python3 -c 'import json,sys; rows=json.load(sys.stdin); project,live,port=sys.argv[1:]; assert len(rows)==3; names=set()
+for row in rows:
+ labels=row["Config"]["Labels"]; assert labels.get("com.docker.compose.project")==project; names.add(labels.get("com.docker.compose.service")); assert labels.get("com.docker.compose.project.working_dir")==live+"/deploy"; assert row["State"]["Running"]
+ if labels.get("com.docker.compose.service")=="app": assert row["NetworkSettings"]["Ports"].get("3001/tcp")==[{"HostIp":"127.0.0.1","HostPort":port}]
+assert names=={"app","mongo","proxy"}' "$project" "$live_dir" "$loopback_port" || die 'Labels/cổng của container không thuộc chính xác triển khai IELTS.'
+for parent in "$private_dir/updates" "$live_dir/.local/releases"; do
+  if [[ -e "$parent" || -L "$parent" ]]; then [[ -d "$parent" && ! -L "$parent" && "$(readlink -e "$parent")" == "$parent" && "$(stat -c '%u' "$parent")" == 0 ]] || die 'Thư mục update/release bị chuyển hướng.'; fi
+done
+curl_domain() { curl --silent --show-error --noproxy '*' --connect-timeout 10 --max-time 30 --resolve "$domain:443:127.0.0.1" "$@"; }
+curl_domain --fail "$origin/api/health" | python3 -c 'import json,sys;x=json.load(sys.stdin);assert x["status"]=="ok" and x["database"]=="mongodb" and x["demoEnabled"] is False' || die 'Website hiện tại chưa healthy qua HTTPS hợp lệ.'
+if (( $# == 4 )); then say 'Preflight đạt; --check không tải/build/dừng/thay đổi ứng dụng hoặc dữ liệu.'; exit 0; fi
+
+# No mutation occurs above this line. Lock only this deployment, never Docker.
+[[ ! -L "$private_dir/update.lock" ]] || die 'Lock bị chuyển hướng.'
+exec 9>"$private_dir/update.lock"
+flock -n 9 || die 'Project này đang có một lượt cập nhật khác.'
+mkdir -p -m 700 "$private_dir/updates" "$live_dir/.local/releases"
+audit_dir="$(mktemp -d "$private_dir/updates/${source_commit:0:12}-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+release_dir="$(mktemp -d "$live_dir/.local/releases/${source_commit:0:12}-XXXXXX")"
+source_dir="$release_dir/source"; mkdir -m 700 "$source_dir"
+duo_env="$release_dir/duo.env"
+nonce="${release_dir##*-}"; nonce="${nonce,,}"
+new_image="$project-app:release-${source_commit:0:12}-$nonce"
+if docker image inspect "$new_image" >/dev/null 2>&1; then die 'Tên image riêng đã tồn tại; chưa build.'; fi
+app_stopped=false; new_app_started=false; baseline_ready=false
+had_release=false
+snapshot_containers() {
+  local id
+  while IFS= read -r id; do [[ -z "$id" ]] || docker inspect --format '{{.Id}} {{.State.Running}} {{.State.StartedAt}}' "$id" || return 1; done < "$audit_dir/before.ids"
+}
+snapshot_listeners() { ss -H -lntu | awk '{print $1" "$5}' | sort -u; }
+protected_files=("$config_file" "$compose_file" "$domain_override" "$private_dir/app.env" "$live_dir/deploy/nginx.conf" "$private_dir/tls/site.crt")
+verify_existing() {
+  snapshot_containers > "$audit_dir/after.containers" || return 1
+  cmp -s "$audit_dir/before.containers" "$audit_dir/after.containers" || return 1
+  snapshot_listeners > "$audit_dir/after.listeners" || return 1
+  comm -23 "$audit_dir/before.listeners" "$audit_dir/after.listeners" > "$audit_dir/missing.listeners" || return 1
+  [[ ! -s "$audit_dir/missing.listeners" ]] || return 1
+  [[ "$(systemctl show nginx.service --property=MainPID --value)" == "$nginx_pid" && "$(systemctl is-active nginx.service)" == active ]] || return 1
+  sha256sum --check --status "$audit_dir/protected.sha256" || return 1
+  python3 - "$audit_dir/nginx-files.json" <<'PYVERIFY' || return 1
+import hashlib,json,os,sys
+for path,old in json.load(open(sys.argv[1])).items():
+ st=os.stat(path); now={'real':os.path.realpath(path),'sha':hashlib.sha256(open(path,'rb').read()).hexdigest(),'mode':st.st_mode,'uid':st.st_uid,'gid':st.st_gid}; assert now==old
+PYVERIFY
+}
+mongo_exec() { docker exec -i "$mongo_id" mongosh --quiet --norc mongodb://127.0.0.1:27017/ielts_ai --eval "$1"; }
+# UPDATE_MONGO_INPUT_BEGIN
+mongo_exec_input() {
+  # mongosh makes pipe fd 0 nonblocking. Large fs.readFileSync(0) reads can
+  # throw EAGAIN, so upload only to this Mongo container's private temp file
+  # before giving the unchanged query/guard a regular-file stdin descriptor.
+  local input_bytes input_sha
+  [[ -f "$2" && ! -L "$2" ]] || return 1
+  input_bytes="$(wc -c < "$2")" || return 1
+  [[ "$input_bytes" =~ ^[0-9]+$ ]] && (( input_bytes > 0 && input_bytes <= 64 * 1024 * 1024 )) || return 1
+  input_sha="$(sha256sum -- "$2")" || return 1
+  input_sha="${input_sha%% *}"
+  docker exec -i "$mongo_id" sh -c '
+set -eu
+umask 077
+ielts_input="$(mktemp /tmp/ielts-update-input.XXXXXX)"
+trap '\''rm -f -- "$ielts_input"'\'' EXIT HUP INT TERM
+cat > "$ielts_input"
+[ "$(wc -c < "$ielts_input")" -eq "$2" ]
+ielts_digest="$(sha256sum -- "$ielts_input")"
+[ "${ielts_digest%% *}" = "$3" ]
+mongosh --quiet --norc mongodb://127.0.0.1:27017/ielts_ai --eval "$1" < "$ielts_input"
+' sh "$1" "$input_bytes" "$input_sha" < "$2"
+}
+# UPDATE_MONGO_INPUT_END
+preserve_ip_endpoint() {
+  if curl --fail --silent --show-error --noproxy '*' --connect-timeout 5 --max-time 15 --cacert "$private_dir/tls/site.crt" --resolve "$public_host:$public_port:127.0.0.1" "https://$public_host:$public_port/api/health" -o "$audit_dir/ip-health.json" 2>/dev/null; then return 0; fi
+  # Re-resolve only this project's upstream after app recreation. No host reload.
+  docker compose "${current_args[@]}" exec -T proxy nginx -t > "$audit_dir/ip-proxy.log" 2>&1 || return 1
+  docker compose "${current_args[@]}" exec -T proxy nginx -s reload >> "$audit_dir/ip-proxy.log" 2>&1 || return 1
+  curl --fail --silent --show-error --noproxy '*' --connect-timeout 5 --max-time 30 --cacert "$private_dir/tls/site.crt" --resolve "$public_host:$public_port:127.0.0.1" "https://$public_host:$public_port/api/health" -o "$audit_dir/ip-health.json" 2>/dev/null
+}
+restore_old_app() {
+  [[ "$(docker image inspect --format '{{.Id}}' "$old_image_ref")" == "$old_image" ]] || return 1
+  cp -p -- "$audit_dir/compose.sh.before" "$compose_wrapper" || return 1
+  if [[ "$had_release" == true ]]; then cp -p -- "$audit_dir/release.compose.before" "$release_override" || return 1
+  else rm -f -- "$release_override" || return 1; fi
+  current_args=("${old_args[@]}")
+  docker compose "${current_args[@]}" up -d --no-deps --no-build --wait --wait-timeout 240 app > "$audit_dir/restore-old-app.log" 2>&1 || return 1
+  [[ "$(docker inspect --format '{{.Image}}' "$(service_id app)")" == "$old_image" ]] || return 1
+  preserve_ip_endpoint && verify_existing
+}
+on_exit() {
+  local code=$?; trap - EXIT; set +e
+  if (( code != 0 )); then
+    if [[ "$app_stopped" == true && "$new_app_started" == false ]]; then
+      if restore_old_app; then printf '%s\n' 'Đã khôi phục riêng app cũ; app mới chưa khởi động, database chưa bị thay đổi bởi bản mới.' >&2
+      else printf '%s\n' 'Chưa khôi phục được app cũ; giữ toàn bộ dữ liệu và log riêng để xử lý.' >&2; fi
+    elif [[ "$new_app_started" == true ]]; then
+      printf '%s\n' 'Không rollback dữ liệu hoặc tài khoản: giữ cấu hình/bản mới và mọi dữ liệu; cần kiểm tra log riêng.' >&2
+    fi
+    if [[ "$baseline_ready" == true ]] && verify_existing; then printf '%s\n' 'Container khác/MongoDB/proxy, cổng và cấu hình host Nginx giữ nguyên.' >&2; fi
+    printf 'Cập nhật chưa được xác nhận. Log riêng: %s\n' "$audit_dir" >&2
+  fi
+  exit "$code"
+}
+trap on_exit EXIT
+
+# The Python program is code only. The inherited stdin carries a bounded private
+# JSON document, so no credential value enters an argument, build or log stream.
+credential_validator="$(cat <<'PYCREDENTIAL'
+import json,os,re,sys
+try:
+ raw=sys.stdin.buffer.read(16385)
+ assert 2<=len(raw)<=16384
+ settings=json.loads(raw)
+ assert isinstance(settings,dict) and set(settings)=={'duoId','accounts'}
+ assert isinstance(settings['duoId'],str) and re.fullmatch(r'[a-z0-9][a-z0-9-]{2,79}',settings['duoId'])
+ accounts=settings['accounts'];assert isinstance(accounts,list) and len(accounts)==2
+ for account in accounts:
+  assert isinstance(account,dict) and set(account)=={'role','name','phone','passwordHash'}
+  assert account['role'] in ['husband','wife']
+  assert isinstance(account['name'],str) and 2<=len(account['name'].strip())<=80 and len(account['name'])<=80 and not re.search(r'[\x00-\x1f]',account['name'])
+  assert isinstance(account['phone'],str) and re.fullmatch(r'0[35789]\d{8}',account['phone'])
+  assert isinstance(account['passwordHash'],str) and re.fullmatch(r'scrypt:[a-f0-9]{32}:[a-f0-9]{128}',account['passwordHash'])
+  account['name']=account['name'].strip()
+ assert len({a['role'] for a in accounts})==len({a['phone'] for a in accounts})==2
+ os.umask(0o077)
+ compact=json.dumps(settings,ensure_ascii=False,separators=(',',':'))
+ with open(sys.argv[1],'x') as output:output.write(compact+'\n')
+ # Single-quoted dotenv values prevent dollar interpolation. Compose supports
+ # an escaped apostrophe within this quoting form, including in learner names.
+ escaped=compact.replace("'", "\\'")
+ with open(sys.argv[2],'x') as output:output.write("DUO_ENABLED=true\nDUO_CREDENTIALS_FILE=''\nDUO_ACCOUNTS_JSON='"+escaped+"'\n")
+except Exception:
+ sys.exit('Private hashed credential JSON is invalid; no account details printed.')
+PYCREDENTIAL
+)"
+python3 -c "$credential_validator" "$audit_dir/credentials.json" "$duo_env" || die 'Cấu hình hai tài khoản riêng không hợp lệ; app cũ vẫn chạy.'
+unset credential_validator
+
+docker ps -q --no-trunc | awk -v ielts_app="$old_app_id" '$0!=ielts_app' | sort > "$audit_dir/before.ids"
+snapshot_containers > "$audit_dir/before.containers"
+snapshot_listeners > "$audit_dir/before.listeners"
+sha256sum "${protected_files[@]}" > "$audit_dir/protected.sha256"
+python3 - "$audit_dir/nginx-files.json" <<'PYNGINX'
+import hashlib,json,os,re,subprocess,sys
+x=subprocess.run(['nginx','-T'],capture_output=True,text=True,timeout=30);assert x.returncode==0;assert len(x.stdout)<10_000_000
+paths=re.findall(r'(?m)^# configuration file (.+):\s*$',x.stdout);assert paths
+result={}
+for path in paths:
+ st=os.stat(path);result[path]={'real':os.path.realpath(path),'sha':hashlib.sha256(open(path,'rb').read()).hexdigest(),'mode':st.st_mode,'uid':st.st_uid,'gid':st.st_gid}
+json.dump(result,open(sys.argv[1],'w'),sort_keys=True)
+PYNGINX
+baseline_ready=true
+say 'Đang tải đúng commit và kiểm SHA256; app hiện tại vẫn chạy.'
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --connect-timeout 20 --max-time 300 --retry 2 "https://codeload.github.com/thaituegia/websiteIeltsAi/tar.gz/$source_commit" -o "$audit_dir/source.tar.gz"
+printf '%s  %s\n' "$archive_sha256" "$audit_dir/source.tar.gz" | sha256sum --check --status || die 'Checksum archive không khớp; chưa giải nén hoặc build.'
+python3 - "$audit_dir/source.tar.gz" "$source_dir" "$source_commit" <<'PYEXTRACT'
+import os,pathlib,sys,tarfile
+archive,destination,commit=sys.argv[1:];assert os.path.getsize(archive)<128*1024*1024
+with tarfile.open(archive,'r:gz') as bundle:
+ members=bundle.getmembers();assert members and len(members)<100_000 and sum(m.size for m in members)<512*1024*1024
+ expected='websiteIeltsAi-'+commit
+ for member in members:
+  parts=pathlib.PurePosixPath(member.name).parts
+  assert parts and parts[0]==expected and not pathlib.PurePosixPath(member.name).is_absolute() and '..' not in parts
+  assert member.isdir() or member.isfile(), 'Symlink/hardlink/special archive member rejected'
+ for member in members:
+  parts=pathlib.PurePosixPath(member.name).parts[1:]
+  if not parts:continue
+  target=os.path.join(destination,*parts)
+  if member.isdir():os.makedirs(target,mode=0o755,exist_ok=True)
+  else:
+   os.makedirs(os.path.dirname(target),mode=0o755,exist_ok=True)
+   with bundle.extractfile(member) as source,open(target,'xb') as output:output.write(source.read())
+   os.chmod(target,0o644)
+PYEXTRACT
+for file in "$source_dir/Dockerfile" "$source_dir/.dockerignore" "$source_dir/deploy/compose.sh"; do [[ -f "$file" && ! -L "$file" ]] || die 'Archive thiếu file build/wrapper đã kiểm tra.'; done
+bash -n "$source_dir/deploy/compose.sh"
+awk '/release\.compose\.yaml/{ok=1}END{exit !ok}' "$source_dir/deploy/compose.sh" || die 'Wrapper của bản mới chưa hỗ trợ release override bền vững.'
+cp -p -- "$compose_wrapper" "$audit_dir/compose.sh.before"
+if [[ -f "$release_override" ]]; then had_release=true; cp -p -- "$release_override" "$audit_dir/release.compose.before"; fi
+say 'Build riêng tối đa 1024 MiB RAM, không swap và 0,5 CPU; chưa dừng app.'
+DOCKER_BUILDKIT=0 docker build --pull --memory=1024m --memory-swap=1024m --cpu-period=100000 --cpu-quota=50000 --cpu-shares=128 --tag "$new_image" "$source_dir" > "$audit_dir/build.log" 2>&1 || die "Build lỗi; app cũ vẫn chạy. Xem $audit_dir/build.log"
+docker run --rm --network none --memory=512m --memory-swap=512m --cpus=0.25 --entrypoint node "$new_image" --import tsx --input-type=module -e 'const{contentBank,vocabularyBank,placementBank}=await import("/app/server/data/index.ts");console.log(JSON.stringify({content:contentBank.map(x=>({...x,_id:x.id})),vocabulary:vocabularyBank.map(x=>({...x,_id:x.id})),placementItems:placementBank.map(x=>({...x,_id:x.id}))}));' > "$audit_dir/seed-manifest.json" 2> "$audit_dir/manifest.log" || die 'Không đọc được manifest học liệu trong image mới.'
+python3 - "$audit_dir/seed-manifest.json" <<'PYMANIFEST'
+import json,sys
+x=json.load(open(sys.argv[1]));assert set(x)=={'content','vocabulary','placementItems'}
+assert len(x['content'])==628 and len(x['vocabulary'])==744 and len(x['placementItems'])==640
+assert sum(d['format']=='lesson' for d in x['content'])==544 and sum(d['format']=='full-mock' for d in x['content'])==84
+for rows in x.values():assert len({d['_id'] for d in rows})==len(rows) and all(isinstance(d['_id'],str) and d['_id']==d['id'] for d in rows)
+PYMANIFEST
+verify_existing || die 'Hiện trạng project khác thay đổi trong lúc build; chưa chuyển app.'
+[[ "$(service_id app)" == "$old_app_id" && "$(docker image inspect --format '{{.Id}}' "$old_image_ref")" == "$old_image" ]] || die 'App/image cũ đã thay đổi trong lúc build.'
+cat > "$audit_dir/release.compose.new" <<EORELEASE
+services:
+  app:
+    image: $new_image
+    build:
+      context: $source_dir
+      dockerfile: Dockerfile
+EORELEASE
+chmod 600 "$audit_dir/release.compose.new"
+python3 - "$audit_dir/release.compose.new" "$duo_env" <<'PYENVFILE'
+import json,sys
+with open(sys.argv[1],'a') as output:
+ output.write('    env_file:\n      - '+json.dumps(sys.argv[2],ensure_ascii=False)+'\n')
+PYENVFILE
+docker compose "${base_args[@]}" -f "$audit_dir/release.compose.new" config --quiet || die 'Release override chưa hợp lệ; chưa dừng app.'
+python3 - "$project" "$config_file" "$compose_file" "$domain_override" "$audit_dir/release.compose.new" "$audit_dir/credentials.json" <<'PYNEWRELEASE' || die 'Release mới đổi cấu hình ngoài image/source và đăng nhập Duo; chưa dừng app.'
+import json,subprocess,sys
+project,env,base,domain,release,credentials=sys.argv[1:]
+args=['docker','compose','--project-name',project,'--env-file',env,'-f',base,'-f',domain]
+def read(extra):
+ x=subprocess.run(args+extra+['config','--format','json'],capture_output=True,text=True,timeout=30);assert x.returncode==0;return json.loads(x.stdout)
+a,b=read([]),read(['-f',release])
+credentials=json.load(open(credentials));duo=b['services']['app']['environment']
+# Compose escapes each literal dollar as $$ in its rendered config JSON.
+assert duo.get('DUO_ENABLED')=='true' and json.loads(duo['DUO_ACCOUNTS_JSON'].replace('$$','$'))==credentials and not duo.get('DUO_CREDENTIALS_FILE')
+for data in (a,b):
+ app=data['services']['app'];app.pop('image',None);app['build'].pop('context',None)
+ for key in ['DUO_ENABLED','DUO_ACCOUNTS_JSON','DUO_CREDENTIALS_FILE']:app.get('environment',{}).pop(key,None)
+assert a==b
+PYNEWRELEASE
+say 'Bản build đạt. Chỉ app IELTS tạm dừng để lưu ngân hàng cũ và chuyển bản mới; MongoDB/proxy/website khác giữ nguyên.'
+app_stopped=true
+docker compose "${old_args[@]}" stop --timeout 30 app > "$audit_dir/stop-old-app.log" 2>&1 || die 'Không dừng được riêng app IELTS.'
+mongo_exec 'const x={};for(const name of ["content","vocabulary","placementItems"])x[name]=db.getCollection(name).find().sort({_id:1}).toArray();print(EJSON.stringify(x,null,0,{relaxed:false}));' > "$audit_dir/public.before.ejson" 2> "$audit_dir/snapshot.log" || die 'Chưa lưu được ngân hàng công khai cũ.'
+python3 - "$audit_dir/public.before.ejson" <<'PYSNAPSHOT'
+import json,sys
+x=json.load(open(sys.argv[1]));assert set(x)=={'content','vocabulary','placementItems'}
+assert all(isinstance(rows,list) and rows for rows in x.values())
+PYSNAPSHOT
+mongo_exec '/* DUO_PRIVATE_SNAPSHOT_BEGIN */
+const crypto=require("crypto");
+const canonical=(value)=>{const plain=EJSON.serialize(value,{relaxed:false});const order=v=>Array.isArray(v)?v.map(order):v&&typeof v==="object"?Object.fromEntries(Object.keys(v).sort().map(k=>[k,order(v[k])])):v;return JSON.stringify(order(plain));};
+const names=db.getCollectionNames().filter(name=>!["users","content","vocabulary","placementItems"].includes(name)).sort();
+const hashes={};for(const name of names){const hash=crypto.createHash("sha256");let count=0;db.getCollection(name).find().sort({_id:1}).maxTimeMS(30000).forEach(doc=>{count++;hash.update(canonical(doc)+"\n");});hashes[name]={count,sha256:hash.digest("hex")};}
+print(EJSON.stringify({users:db.users.find().sort({_id:1}).maxTimeMS(15000).toArray(),hashes},null,0,{relaxed:false}));
+/* DUO_PRIVATE_SNAPSHOT_END */' > "$audit_dir/learners.before.ejson" 2> "$audit_dir/learners-snapshot.log" || die 'Chưa đối chiếu được dữ liệu học trước khi chuyển; app mới chưa khởi động.'
+python3 - "$audit_dir/seed-manifest.json" "$audit_dir/public.before.ejson" "$audit_dir/learners.before.ejson" "$audit_dir/credentials.json" "$audit_dir/verify-input.json" <<'PYVERIFYINPUT'
+import json,os,sys
+manifest,before,learners,credentials,destination=sys.argv[1:]
+for path in [manifest,before,learners,credentials]:assert 0<os.path.getsize(path)<=32*1024*1024
+payload={'manifest':json.load(open(manifest)),'before':json.load(open(before)),'learners':json.load(open(learners)),'credentials':json.load(open(credentials))}
+with open(destination,'x') as output:json.dump(payload,output,separators=(',',':'))
+PYVERIFYINPUT
+cp -p -- "$source_dir/deploy/compose.sh" "$compose_wrapper"
+cp -p -- "$audit_dir/release.compose.new" "$release_override"
+chmod 600 "$release_override"
+current_args=("${base_args[@]}" -f "$release_override")
+bash "$compose_wrapper" validate || die 'Wrapper/live Compose không hợp lệ sau cập nhật.'
+new_app_started=true
+docker compose "${current_args[@]}" up -d --no-deps --no-build --wait --wait-timeout 240 app > "$audit_dir/up-new-app.log" 2>&1 || die 'App mới chưa healthy.'
+new_app_id="$(service_id app)"
+[[ "$new_app_id" =~ ^[a-f0-9]{64}$ && "$(docker inspect --format '{{.Config.Image}}' "$new_app_id")" == "$new_image" ]] || die 'App không chạy đúng image mới.'
+docker inspect --format '{{json .NetworkSettings.Ports}}' "$new_app_id" | python3 -c 'import json,sys;assert json.load(sys.stdin).get("3001/tcp")==[{"HostIp":"127.0.0.1","HostPort":"19088"}]' || die 'Binding mới không còn loopback chính xác.'
+[[ "$(docker inspect --format '{{range .Config.Env}}{{if eq (index (split . "=") 0) "APP_ORIGIN"}}{{println (index (split . "=") 1)}}{{end}}{{end}}' "$new_app_id")" == "$origin" ]] || die 'Origin bị thay đổi.'
+curl_domain --fail "$origin/api/health" -o "$audit_dir/health.json"
+python3 - "$audit_dir/health.json" <<'PYHEALTH'
+import json,sys
+x=json.load(open(sys.argv[1]));assert x['status']=='ok' and x['database']=='mongodb' and x['demoEnabled'] is False
+targets={'lessons':544,'mocks':84,'vocabulary':744,'placement':640}
+assert x.get('duoEnabled') is True and x.get('authMode')=='phone'
+assert all(type(x['bank'].get(name)) is int and x['bank'][name]>=count for name,count in targets.items())
+PYHEALTH
+mongo_exec_input '/* DUO_VERIFY_DATABASE_BEGIN */
+const fs=require("fs"),crypto=require("crypto");const input=EJSON.parse(fs.readFileSync(0,"utf8"));
+const canonical=(value,relaxed=true)=>{const plain=EJSON.serialize(value,{relaxed});const order=v=>Array.isArray(v)?v.map(order):v&&typeof v==="object"?Object.fromEntries(Object.keys(v).sort().map(k=>[k,order(v[k])])):v;return JSON.stringify(order(plain));};
+const result={};for(const name of ["content","vocabulary","placementItems"]){const rows=db.getCollection(name).find().maxTimeMS(15000).toArray();const current=new Map(rows.map(d=>[String(d._id),d]));const oldIds=new Set(input.before[name].map(d=>String(d._id)));
+ for(const expected of input.manifest[name]){const id=String(expected._id),actual=current.get(id);if(!actual||(!oldIds.has(id)&&canonical(actual)!==canonical(expected)))throw new Error("Seed record missing or changed");}
+ for(const expected of input.before[name]){const actual=current.get(String(expected._id));if(!actual||canonical(actual)!==canonical(expected))throw new Error("Pre-existing public record missing or changed");}
+ result[name]={seeded:input.manifest[name].length,total:rows.length,oldPreserved:input.before[name].length};}
+for(const [name,expected] of Object.entries(input.learners.hashes)){const hash=crypto.createHash("sha256");let count=0;db.getCollection(name).find().sort({_id:1}).maxTimeMS(30000).forEach(doc=>{count++;hash.update(canonical(doc,false)+"\n");});if(count!==Number(expected.count)||hash.digest("hex")!==expected.sha256)throw new Error("Learner collection changed: "+name);}
+const users=db.users.find().maxTimeMS(15000).toArray();const currentUsers=new Map(users.map(d=>[String(d._id),d]));
+const oldUsers=new Map(input.learners.users.map(d=>[String(d._id),d]));const allowed=new Set(["name","phone","duoRole","duoId","passwordHash","demo","targetBand"]);const strip=(doc)=>Object.fromEntries(Object.entries(doc).filter(([key])=>!allowed.has(key)));
+const fixed=[];
+for(const account of input.credentials.accounts){const matches=users.filter(u=>u.phone===account.phone);if(matches.length!==1)throw new Error("Fixed account phone missing or ambiguous");const user=matches[0];
+ if(user.name!==account.name||user.duoRole!==account.role||user.duoId!==input.credentials.duoId||user.passwordHash!==account.passwordHash||user.demo!==false||Number(user.targetBand)!==8)throw new Error("Fixed account binding invalid");
+ const oldPhone=input.learners.users.filter(u=>u.phone===account.phone);if(oldPhone.length>1)throw new Error("Pre-existing phone ambiguous");
+ if(oldPhone.length){if(String(user._id)!==String(oldPhone[0]._id)||canonical(strip(user),false)!==canonical(strip(oldPhone[0]),false))throw new Error("Fixed learner identity or assessed progress changed");}
+ else if(String(user._id)!==input.credentials.duoId+"-"+account.role||oldUsers.has(String(user._id)))throw new Error("New fixed identity overlaps a legacy user");
+ fixed.push(String(user._id));}
+if(new Set(fixed).size!==2)throw new Error("Exactly two fixed identities required");
+for(const [id,old] of oldUsers){const now=currentUsers.get(id);if(!now)throw new Error("Legacy user missing");if(!fixed.includes(id)&&canonical(now,false)!==canonical(old,false))throw new Error("Unrelated legacy user changed");}
+for(const user of users){if(!oldUsers.has(String(user._id))&&!fixed.includes(String(user._id)))throw new Error("Unexpected new user");}
+print(JSON.stringify(result));
+/* DUO_VERIFY_DATABASE_END */' "$audit_dir/verify-input.json" > "$audit_dir/mongo-counts.json" 2> "$audit_dir/mongo-counts.log" || die 'Đối chiếu học liệu/tài khoản/tiến độ chưa đạt; giữ mọi dữ liệu để xử lý riêng.'
+curl_domain --fail "$origin/api/auth/me" -o "$audit_dir/auth.json"
+python3 - "$audit_dir/auth.json" <<'PYAUTH'
+import json,sys
+assert json.load(open(sys.argv[1]))['user'] is None
+PYAUTH
+status="$(curl_domain -X POST -H "Origin: $origin" -H 'Content-Type: application/json' --data '{}' "$origin/api/auth/register" -o "$audit_dir/invalid-registration.json" -w '%{http_code}')"
+[[ "$status" == 403 ]] || die 'Đăng ký tài khoản mới chưa bị từ chối.'
+status="$(curl_domain -X POST -H 'Origin: https://example.invalid' -H 'Content-Type: application/json' --data '{}' "$origin/api/auth/register" -o "$audit_dir/wrong-origin.json" -w '%{http_code}')"
+[[ "$status" == 403 ]] || die 'Origin khác chưa bị từ chối.'
+status="$(curl_domain -X POST -H "Origin: $origin" -H 'Content-Type: application/json' --data '{"phone":"0390000003","password":"synthetic-denied-login"}' "$origin/api/auth/login" -o "$audit_dir/denied-login.json" -w '%{http_code}')"
+[[ "$status" == 401 ]] || die 'Tài khoản ngoài danh sách chưa bị từ chối.'
+status="$(curl_domain -X POST -H "Origin: $origin" -H 'Content-Type: application/json' --data '{"learner":1}' "$origin/api/auth/demo" -o "$audit_dir/denied-demo.json" -w '%{http_code}')"
+[[ "$status" == 403 ]] || die 'Đăng nhập demo chưa bị từ chối.'
+curl_domain --fail "$origin/" -o "$audit_dir/index.html"
+asset="$(python3 - "$audit_dir/index.html" <<'PYASSET'
+import re,sys
+m=re.search(r'<script[^>]+src="(/assets/[a-zA-Z0-9._-]+\.js)"',open(sys.argv[1]).read());assert m;print(m.group(1))
+PYASSET
+)" || die 'Giao diện thiếu JavaScript build.'
+curl_domain --fail "$origin$asset" -D "$audit_dir/asset.headers" -o "$audit_dir/app.js"
+awk 'tolower($0)~/^content-type:.*(javascript|ecmascript)/{ok=1}END{exit !ok}' "$audit_dir/asset.headers" || die 'File frontend trả sai kiểu dữ liệu.'
+[[ "$(wc -c < "$audit_dir/app.js")" -gt 100 ]] || die 'JavaScript trống.'
+preserve_ip_endpoint || die 'Endpoint IP cũ chưa hoạt động sau cập nhật.'
+verify_existing || die 'Container/cổng/cấu hình khác đã thay đổi trong lúc cập nhật.'
+printf '%s\n' "$source_commit" > "$audit_dir/source.commit"
+printf '%s\n' success > "$audit_dir/result"
+say 'HOÀN TẤT kiểm tra trên server: đủ bộ seed 544 bài luyện, 84 đề mô phỏng, 744 từ vựng, 640 câu placement; đăng nhập cố định hai người bằng số điện thoại. Các ID cũ và học liệu tự tạo ngoài bộ seed giữ nguyên.'
+python3 - "$audit_dir/mongo-counts.json" <<'PYCOUNTS'
+import json,sys
+x=json.load(open(sys.argv[1]))
+for name in ['content','vocabulary','placementItems']:
+ row=x[name];print(f"MongoDB {name}: seed {row['seeded']}, tổng {row['total']}, bản ghi cũ giữ nguyên {row['oldPreserved']}")
+PYCOUNTS
+printf 'Website: %s\nImage riêng: %s\nNguồn mới: %s\nLog riêng: %s\n' "$origin" "$new_image" "$source_dir" "$audit_dir"
+say 'Học liệu cũ, tiến độ/placement/ghi âm và tài khoản legacy khác giữ nguyên. Hai danh tính cố định và mục tiêu 8.0 đã xác minh; MongoDB/proxy/website khác không bị thay thế. Chưa xác nhận truy cập Internet từ lệnh này.'

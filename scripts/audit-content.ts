@@ -38,7 +38,7 @@ const types = new Set<string>();
 const levels = new Set<string>();
 const topics = new Set<string>();
 for (const item of contentBank) {
-  const expanded = item.provenance?.version?.includes("v3") === true;
+  const expanded = item.provenance?.method === "ai-assisted";
   assert.equal(item.source, expanded ? "ai" : "authored", `${item.id}: unexpected source`);
   assert.equal(
     item.quality,
@@ -91,7 +91,7 @@ for (const item of contentBank) {
       );
   }
   unique(
-    item.questions.filter((q, index, all) => !q.selectionGroup || all.findIndex((candidate) => candidate.selectionGroup?.id === q.selectionGroup?.id) === index).map((q) => q.prompt),
+    item.questions.filter((q, index, all) => !q.selectionGroup || all.findIndex((candidate) => candidate.selectionGroup?.id === q.selectionGroup?.id) === index).map((q) => `${q.sectionIndex}:${q.prompt}`),
     `${item.id} question wording`,
   );
   for (const [index, q] of item.questions.entries()) {

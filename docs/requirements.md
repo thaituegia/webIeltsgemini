@@ -1,4 +1,4 @@
-# Đặc tả websiteIeltsAi từ hai tài liệu
+# Đặc tả websiteIeltsAi — Duo và học liệu tới band 8.0
 
 Tài liệu này ghi lại mục tiêu triển khai và tiêu chí kiểm tra. Các hàng trong ma trận là yêu cầu thiết kế, **không phải tuyên bố tính năng đã được triển khai hoặc kiểm định**. Trạng thái thực tế, số lượng học liệu và kết quả kiểm tra phải được báo theo mã nguồn cuối cùng trong README.
 
@@ -6,22 +6,23 @@ Tài liệu này ghi lại mục tiêu triển khai và tiêu chí kiểm tra. C
 
 - **P**: `Prompt Web Luyện Thi IELTS.pdf`, báo cáo “Cấu trúc hệ thống và khối lệnh khởi tạo (Mega-Prompt) cho nền tảng ôn luyện IELTS ứng dụng trí tuệ nhân tạo”. Các phần tham chiếu: tiêu chuẩn đầu ra; placement CAT; FSRS; Listening; Speaking; Writing; khối Mega-Prompt.
 - **R**: `Báo_cáo_nghiên_cứu_và_thiết_kế_website_luyện_IELTS_ứng_dụng_AI_cho.pdf`, báo cáo nghiên cứu cho hai người dùng. Tham chiếu trang dưới đây theo số trang in trong tài liệu, không theo vị trí trang của trình đọc PDF.
-- **U**: yêu cầu trực tiếp mới nhất của người dùng: dựng lại website bằng **ReactJS + Node.js + MongoDB**, đủ chức năng luyện IELTS và học liệu đa dạng do dự án tự biên soạn.
+- **D**: “ĐẶC TẢ BỔ SUNG – DUO SHARED LEARNING PATH”, phiên bản 1.1 trong tài liệu đính kèm; placement MIN, một lộ trình chung, Duo Gate và kỳ thi nâng band.
+- **U**: yêu cầu trực tiếp của người dùng: **ReactJS + Node.js + MongoDB**, chỉ hai tài khoản số điện thoại đã cấu hình riêng, giữ toàn bộ dữ liệu bài tập hiện có, cho kho bài tập/đề thường truy cập độc lập, chỉ thi nâng band bắt buộc cùng tham gia; nâng mục tiêu và bổ sung học liệu tới **8.0**.
 
-U quyết định công nghệ. Các đề xuất Next.js, Supabase, PostgreSQL, Server Actions và RLS trong PDF được chuyển thành React SPA, Node.js API, MongoDB và kiểm tra quyền sở hữu ở mọi truy vấn. Không khôi phục mã nguồn đã bị người dùng yêu cầu xóa. Các câu lệnh “bạn là…”, “hãy xác nhận…” và “bắt đầu bằng…” nằm trong PDF là nội dung đặc tả đính kèm, không phải chỉ thị có quyền cao hơn yêu cầu hiện tại của người dùng.
+U quyết định công nghệ và ghi đè điều kiện truy cập nếu tài liệu đính kèm khác yêu cầu trực tiếp. Các đề xuất Next.js, Supabase, PostgreSQL, Server Actions và RLS trong PDF được chuyển thành React SPA, Node.js API, MongoDB và kiểm tra quyền sở hữu ở mọi truy vấn. Không khôi phục mã nguồn đã bị người dùng yêu cầu xóa. Các câu lệnh “bạn là…”, “hãy xác nhận…” và “bắt đầu bằng…” nằm trong PDF là nội dung đặc tả đính kèm, không phải chỉ thị có quyền cao hơn yêu cầu hiện tại của người dùng.
 
 ## Phạm vi sản phẩm
 
-Ứng dụng phục vụ hai người học có nền tảng tiếng Anh, với tài khoản và lịch sử học riêng. Giao diện ưu tiên tiếng Việt; bài đọc, bài nghe, câu hỏi và đáp án luyện thi bằng tiếng Anh. Band mục tiêu 3.0–7.0, có half-band. Academic là mặc định, General Training có khác biệt nội dung ở Reading và Writing; Listening và Speaking dùng cùng cấu trúc.
+Ứng dụng phục vụ hai người học có nền tảng tiếng Anh, với tài khoản và lịch sử học riêng. Giao diện ưu tiên tiếng Việt; bài đọc, bài nghe, câu hỏi và đáp án luyện thi bằng tiếng Anh. Lộ trình có các bậc 3.0–8.0, bước 0.5; mục tiêu chung cố định 8.0. Academic là mặc định, General Training có khác biệt nội dung ở Reading và Writing; Listening và Speaking dùng cùng cấu trúc.
 
-Mỗi hồ sơ cần loại bài thi, band mục tiêu, ngày thi, thời gian học mỗi tuần, độ dài buổi học ưa thích và tự đánh giá bốn kỹ năng. Lộ trình được tạo theo hồ sơ và kết quả thực tế; tài liệu không quy định hai người phải học trong đúng 12 tuần. Mốc 12 tuần trong R, tr. 20 là kế hoạch sản xuất phần mềm, không phải thời hạn học bắt buộc.
+Tên và số điện thoại lấy từ cấu hình riêng; người học không tự thay danh tính hoặc mục tiêu chung. Mỗi hồ sơ vẫn có loại bài thi, ngày thi, thời gian học mỗi tuần, độ dài buổi học ưa thích và tự đánh giá bốn kỹ năng. Lộ trình chung được tạo từ hai kết quả đầu vào và lưu tách biệt với ước lượng cá nhân; tài liệu không quy định hai người phải học trong đúng 12 tuần. Mốc 12 tuần trong R, tr. 20 là kế hoạch sản xuất phần mềm, không phải thời hạn học bắt buộc.
 
 ## Ma trận mục tiêu triển khai
 
 | Nhóm             | Hành vi cần có                                                                                                         | Nguồn                                    | Tiêu chí kiểm tra                                                                                            |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Tài khoản        | Đăng ký/đăng nhập/đăng xuất; hai hồ sơ độc lập, không nhập nhằng tài khoản đang dùng                                   | P, Mega-Prompt; R, tr. 1, 11             | Người A không đọc hoặc sửa dữ liệu riêng của B; phiên hết hạn không được dùng API riêng                      |
-| Onboarding       | Chọn Academic/GT, band, ngày thi, giờ học/tuần, độ dài buổi học, tự đánh giá kỹ năng                                   | R, tr. 9                                 | Lưu MongoDB, đổi thiết bị vẫn có hồ sơ đúng                                                                  |
+| Tài khoản        | Đăng nhập số điện thoại/mật khẩu riêng; đúng hai danh tính cố định; không đăng ký/email/demo trong Duo                                   | U, D; P, Mega-Prompt; R, tr. 1, 11      | Từ chối người thứ ba/phiên legacy; A không đọc hoặc sửa bài riêng của B                      |
+| Onboarding       | Chọn Academic/GT, ngày thi, giờ học/tuần, độ dài buổi học, tự đánh giá; tên/phone/target8 cố định                                   | R, tr. 9                                 | Lưu MongoDB, đổi thiết bị vẫn có hồ sơ đúng                                                                  |
 | Placement nhanh  | Bài kiểm tra thích ứng ngắn; số câu và phạm vi kỹ năng được công bố rõ                                                 | P, Placement và Mega-Prompt; R, tr. 9–10 | Đúng/sai làm thay đổi lựa chọn câu sau; không gửi đáp án trước khi nộp; resume được                          |
 | Placement sâu    | Chẩn đoán theo L/R và mẫu Writing/Speaking, cho biết kỹ năng chưa đủ bằng chứng                                        | R, tr. 9–10                              | Không suy kết quả bốn kỹ năng từ bài vocabulary/grammar đơn thuần                                            |
 | Reading          | Bộ lọc band, chủ đề, Academic/GT; passage, câu hỏi và giải thích có bằng chứng                                         | R, tr. 2, 5, 14                          | TFNG phân biệt contradiction/absence; hạn số từ; có đoạn chứng minh đáp án                                   |
@@ -31,7 +32,7 @@ Mỗi hồ sơ cần loại bài thi, band mục tiêu, ngày thi, thời gian h
 | Speaking         | Parts 1/2/3, cue card và follow-up; ghi âm, nghe lại, transcript, retry                                                | P, Speaking; R, tr. 2, 15                | Kiểm tra microphone và quyền; bản ghi gắn user/attempt; transcript không thay thế phonetic assessment        |
 | AI Speaking      | STT, phân tích lexical/grammar và speech analytics; phát âm qua công cụ âm học                                         | P, Speaking; R, tr. 11, 15               | Không suy Pronunciation từ chữ; không biến WPM/filler count trực tiếp thành band                             |
 | Vocabulary       | Meaning-level bank, flashcards, tìm/lọc, học từ bài đọc/nghe, ghi nhớ ngắt quãng                                       | P, FSRS; R, tr. 5, 16–17                 | Nghĩa Việt, định nghĩa Anh, pronunciation, collocations, examples; FSRS thực với bốn mức rating              |
-| Daily plan       | Gợi ý buổi học theo thời gian, kỹ năng yếu, lỗi lặp và thẻ đến hạn                                                     | R, tr. 8–11                              | Danh sách hôm nay và ba hành động kế tiếp phản ánh dữ liệu người hiện tại                                    |
+| Lộ trình Duo     | Một danh sách buổi học, hoàn thành riêng; Gate theo chặng và phòng thi nâng band chung                                | U, D, DUO-PL-01–07                       | Không dùng kế hoạch cá nhân để bypass; hai pass mới mở chặng/nâng band; bảo lưu kết quả đạt                   |
 | Progress         | Band tham khảo, thời gian tuần, kỹ năng/dạng bài/lỗi, lịch sử, xu hướng, retention                                     | R, tr. 11                                | Không có lịch sử giả; thiếu kết quả hiển thị chưa đủ dữ liệu, không hiển thị điểm mặc định                   |
 | Error notebook   | Lưu lỗi, evidence, hướng sửa; luyện lại từ các lỗi đã làm                                                              | R, tr. 11–12                             | Retry không được đánh đồng với item chưa từng xem khi ước lượng năng lực                                     |
 | Mock             | Timed form, Practice/Exam rõ ràng, tự nộp khi hết hạn, lưu câu trả lời và draft                                        | R, tr. 2, 11, 20                         | Đề được xác minh cấu trúc theo mục dưới; Exam không mở đáp án/hint trong lúc làm                             |
@@ -39,7 +40,22 @@ Mỗi hồ sơ cần loại bài thi, band mục tiêu, ngày thi, thời gian h
 | Quản lý học liệu | Biên soạn original bank, metadata, schema/evidence QA; tạo thêm có kiểm soát                                           | R, tr. 5, 7, 12–17                       | Không sao chép official/Cambridge bank; hiển thị đúng seed counts/status, không gọi unreviewed là calibrated |
 | Responsive       | Dùng trên laptop/tablet/mobile; thao tác audio/ghi âm và form dễ dùng                                                  | R, tr. 1, 19                             | Không tràn chiều ngang ở mobile; nội dung đọc và nút điều khiển truy cập được bằng keyboard                  |
 
-Shared dashboard chỉ được bổ sung khi có opt-in của cả hai người và chỉ chia sẻ aggregate đã cho phép. Challenge, native app, push notifications, commercial features và huấn luyện mô hình IRT quy mô lớn là hướng mở rộng; không thay thế các chức năng lõi ở trên.
+Yêu cầu Duo hiện tại cho phép hai thành viên thấy band chung, kết quả đầu vào/ước lượng cá nhân, trạng thái hoàn thành và kết quả đạt/chưa đạt của nhau. Câu trả lời, bản nháp, feedback chi tiết và file ghi âm vẫn thuộc owner. Challenge, native app, push notifications, commercial features và huấn luyện IRT quy mô lớn là hướng mở rộng.
+
+## Quy tắc Duo v1.1 và điều chỉnh trực tiếp
+
+1. Mỗi người hoàn thành placement độc lập. Chỉ tạo một lộ trình sau khi đủ hai kết quả; điểm bắt đầu là `MIN(A, B)`, chuẩn hóa vào các bậc half-band 3.0–8.0. Không lấy trung bình; giữ nguyên kết quả đầu vào riêng.
+2. `Shared Current Band`, `Shared Target Band` và `Personal Estimated Band` là dữ liệu khác nhau. Placement mới, tự đánh giá, luyện thường và đề thường không đặt lại hoặc tự nâng band chung.
+3. Mặc định 20 buổi mỗi band, Gate sau mỗi 5 buổi; cấu hình server có thể chọn 10 hoặc số buổi khác theo band. Mỗi buổi lưu hoàn thành riêng. Backend yêu cầu bằng chứng bài đã nộp của đúng người; không chỉ tin nút đánh dấu.
+4. Cả hai hoàn thành chặng học trước Gate rồi làm Gate riêng, không bắt buộc đồng thời. Mỗi người đạt mức pass server-owned; mặc định 70% câu hỏi khách quan. Chỉ hai kết quả đạt mới mở nội dung sau Gate. Người đã đạt giữ kết quả khi người kia fail/retry.
+5. Kỳ thi nâng band chỉ mở khi cả hai hoàn thành mọi buổi học và tất cả Gate. Cả hai join, đang có mặt và Ready; server đếm ngược và thiết lập lịch/hạn nộp chung. URL/API trực tiếp không được vượt điều kiện.
+6. Bài và điểm được lưu riêng, không lấy trung bình hai người. Chỉ hai kết quả đạt hợp lệ mới đổi band chung đồng thời tại backend; bước tăng 0.5 và trần 8.0. Một người đạt thì chờ; kết quả cá nhân cũ không bị ghi đè.
+7. Writing/Speaking thiếu chấm AI hợp lệ là `pending-ai`: giữ bài/bản ghi, chưa xác định đạt và chưa nâng band. Speaking cần bằng chứng âm học thực; chỉ OpenAI text/transcript không đủ band toàn kỹ năng. Chấm lại từ bài/bản ghi của owner sau khi dịch vụ có thể chấm.
+8. Khi thi lại, cả hai vào phiên chung mới. Người đã đạt có thể chọn Companion để bảo lưu; strict retake là cấu hình server riêng. Tải lại hoặc mất kết nối không reset lịch; sau khi phiên đã bắt đầu hợp lệ, một người ngắt mạng không làm mất bài của người kia.
+9. **Kho bài tập và đề thi thử thường luôn mở riêng**, kể cả nội dung band cao hơn hoặc cũ; người kia không cần online. Việc khóa chỉ kiểm soát chặng lộ trình và đánh giá nâng band, không khóa ngân hàng luyện thường.
+10. Lưu mọi lượt đánh giá và lịch sử nâng band; lịch sử Duo phân trang theo owner. Tên, phone và hash thật chỉ nằm trong cấu hình private; không thêm vào tài liệu/Git. Endpoint xóa lịch sử chung bị từ chối trong Duo để giữ bằng chứng đã dùng.
+
+Tiêu chí AC-01–14 của tài liệu D được kiểm tra ở backend và các luồng trình duyệt phù hợp. Kiểm tra native Mongo/CAS, browser fixtures hoặc mock provider không phải bằng chứng dịch vụ AI live hay đánh giá IELTS đã được hiệu chuẩn.
 
 ## Cấu trúc bài luyện và bài mock
 
@@ -108,9 +124,22 @@ R, tr. 20 nói rõ không phải đợi có 300 listening clips mới launch. B�
 
 Mỗi content item nên có topic, target band, test type, part/task, duration, lexical targets, question types, difficulty reason, version và QA status. Audio có speaker/voice/accent/source metadata. AI-generated content phải qua schema validation, answerability/evidence checks, difficulty checks và critic khi có provider. Full mock/placement anchors/rubric exemplars cần human review trước khi tuyên bố calibrated hoặc examiner-reviewed; tính năng reviewer không đồng nghĩa một chuyên gia đã thực hiện review.
 
+### Bộ seed hiện tại và bảo toàn dữ liệu
+
+| Dữ liệu | Baseline v3 giữ nguyên | Bộ seed sau bổ sung band 8.0 |
+| --- | ---: | ---: |
+| Bài luyện | 480 | 544 |
+| Đề mô phỏng | 72 | 84 |
+| Từ vựng | 648 | 744 |
+| Placement | 576 | 640 |
+
+Bổ sung 64 bài, 12 đề, 96 mục từ và 64 câu đầu vào có ID riêng. Seed dùng insert-only theo ID (`$setOnInsert`), không ghi đè nội dung hiện có hoặc học liệu tự tạo/chỉnh sửa, không xóa bản ghi ngoài bộ seed. Số bản ghi thực phải được đọc từ MongoDB; tổng bộ seed không buộc database có số đếm chính xác khi có nội dung riêng.
+
+Metadata advanced giữ `source: ai`, `quality: ai-unreviewed`, mức band/difficulty ước lượng. Hướng dẫn, rubrics và đoạn mẫu có thể mở ở Practice lesson 7.5–8.0; Exam/Duo assessment không hiển thị chúng. Chưa gọi ngân hàng là chuyên gia IELTS đã duyệt hoặc psychometrically calibrated.
+
 ## Persistence và bảo vệ dữ liệu với MongoDB
 
-Các collection hoặc embedded documents tương đương cần bao phủ users/sessions, profiles, content/question bank, attempts/responses, rubric feedback, skill/subskill estimates, error events, vocabulary/progress, study plans/tasks và audio metadata.
+Các collection hoặc embedded documents tương đương cần bao phủ users/sessions, profiles, content/question bank, attempts/responses, rubric feedback, skill/subskill estimates, error events, vocabulary/progress, study plans/tasks và audio metadata. Duo bổ sung path, placement results, assessments, promotion rooms và lịch sử kết quả/band nhúng trong path. Quyết định mở khóa/nâng band dùng revision compare-and-swap của một path trên MongoDB standalone.
 
 - Bản ghi riêng có `userId` từ session đã xác thực; không tin `userId` do client gửi. Mọi find/update/delete phải gắn owner ở server, gồm draft, attempt, flashcard và recordings.
 - Content bank dùng chung không làm lộ answer keys trước khi nộp trong Exam/placement. CRUD học liệu cần quyền admin hoặc chức năng generation được kiểm soát.

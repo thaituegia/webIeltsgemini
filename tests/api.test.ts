@@ -87,6 +87,7 @@ test(
     async function start(production = false): Promise<void> {
       server = createApp(database, {
         production,
+        duoEnabled: false,
         demoEnabled: true,
         maxLearners: 2,
         serveClient: false,
