@@ -90,6 +90,18 @@ bash deploy/update.sh LIVE_DIR SOURCE_COMMIT ARCHIVE_SHA256
 
 Script giữ image/source cũ để khôi phục. Khi có lỗi, chỉ tự loại bỏ học liệu mới nếu dữ liệu cũ không đổi, bản ghi mới khớp manifest và chưa có dữ liệu học tập tham chiếu tới chúng. Nếu điều kiện này không đạt, script giữ dữ liệu và bản mới, báo log riêng để xử lý. `release.compose.yaml` lưu image và đường dẫn source riêng cho các lần vận hành tiếp theo. Script này dành cho đúng triển khai đã kiểm tra, không phải trình cài đặt cho VPS bất kỳ.
 
+Với lần cập nhật từ commit `3e6037bf7da2d9ddf5e84b4193353f7a721e9bc9`, `mongosh` có thể báo `EAGAIN` khi đọc manifest gần 8 MB từ Docker stdin. Helper hiện tại đã sửa bằng file tạm riêng quyền 0600 trong đúng container MongoDB, kiểm tra byte count/SHA256 và tự dọn file sau khi truy vấn. Cách này áp dụng cho cả xác minh ID và guarded rollback.
+
+Nếu app mới đang healthy với 480/72/648/576 nhưng lượt cũ dừng tại lỗi đọc manifest, dùng script xác minh riêng thay vì build lại:
+
+```bash
+bash deploy/verify-update.sh LIVE_DIR
+# Chỉ định AUDIT_DIR nếu có nhiều lượt trong cùng một giây.
+bash deploy/verify-update.sh LIVE_DIR AUDIT_DIR
+```
+
+Script tự chọn audit gần nhất của commit v3, kiểm tra đúng image/release/origin/loopback, so sánh từng bản ghi seed và toàn bộ bản ghi public cũ bằng canonical EJSON, xác minh HTTPS/assets và đối chiếu container/cổng/cấu hình với baseline. Nó không build, restart, seed hoặc thay đổi bản ghi database; chỉ tạo receipt riêng trong thư mục audit. Nếu dữ liệu hoặc baseline khác, script dừng và giữ nguyên hiện trạng. Receipt đạt xác nhận trạng thái hiện tại, không ghi đè log lỗi của lượt trước.
+
 ```bash
 bash deploy/compose.sh logs --tail 100 app proxy
 bash deploy/compose.sh ps

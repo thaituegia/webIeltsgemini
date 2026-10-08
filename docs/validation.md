@@ -1,5 +1,17 @@
 # Kết quả kiểm tra
 
+## Xác minh cập nhật VPS và sửa lỗi EAGAIN — 2026-10-08
+
+Người dùng đã chạy updater v3 trên VPS: build production đạt và app mới đang phục vụ. Kiểm tra độc lập qua HTTPS công khai xác nhận `https://sutonghanyu.vn/api/health` trả MongoDB, demo tắt và ngân hàng 480/72/648/576; session anonymous và JavaScript build cũng trả đúng. Đây là bằng chứng website mới đang chạy, chưa phải bằng chứng so sánh từng bản ghi cũ hoặc toàn bộ baseline trên VPS.
+
+Lượt updater gốc dừng khi `mongosh` đọc manifest 7.963.147 byte trực tiếp từ Docker stdin: fd 0 trở thành nonblocking, khiến `fs.readFileSync(0)` báo `EAGAIN`. Cùng lỗi này làm guarded rollback từ chối xử lý; không phải bằng chứng học liệu bị thiếu. Đã tái hiện bằng manifest đầy đủ với MongoDB thực, không chỉ fixture nhỏ.
+
+`deploy/update.sh` sửa ba truy vấn nhận payload bằng helper chuyển dữ liệu tới file tạm riêng quyền 0600 trong đúng Mongo container, xác minh kích thước/SHA256, dùng regular-file stdin và tự dọn file. 22 kiểm thử updater đạt, gồm xác minh toàn bộ manifest và guarded rollback nhiều MB trong database test riêng; dữ liệu học tập được đối chiếu giữ nguyên. Không thay đổi điều kiện an toàn của rollback.
+
+`deploy/verify-update.sh` dành riêng cho app commit `3e6037bf7da2d9ddf5e84b4193353f7a721e9bc9` đã chạy. Script chỉ đọc các collection public, so sánh toàn bộ seed và bản ghi public cũ bằng canonical EJSON, đối chiếu image/digest/release/origin/loopback, HTTPS/assets và baseline container/cổng/cấu hình. Nó chỉ tạo receipt riêng và file tạm; không build, seed, restart, thay đổi database, proxy, host Nginx hoặc firewall. PID Nginx được kiểm tra giữ nguyên trong lượt xác minh; cấu hình được đối chiếu với audit trước cập nhật. Chưa thực thi script xác minh riêng trên VPS: cần receipt từ phiên SSH của người dùng để kết luận đối chiếu từng bản ghi và baseline đã đạt.
+
+21 kiểm thử verifier đạt, gồm các nhánh thiếu/thay đổi bản ghi, custom material, BSON, audit selection và image parser từ heredoc thật. Truy vấn verifier thật nhận 10.549.633 byte qua stdin regular-file quyền 0600 trên MongoDB test: 552/648/576 bản ghi seed và 185/217/193 bản ghi cũ/custom khớp; hash của ba collection public và chín collection cá nhân giữ nguyên, file tạm được dọn. Lượt kiểm thử cuối bật native Mongo cho cả updater/verifier: **99/99 đạt, không skip**. TypeScript, cú pháp Bash và cả bảy Python heredoc đạt. Không chạy lại browser suite vì không thay đổi app/giao diện/học liệu.
+
 ## Mở rộng nội dung v3 — 2026-10-08
 
 Node.js 24, MongoDB 8 và Chromium thực: `npm run build`, `npm run audit:content`, `npm run audit:expansion`, 76 kiểm thử Node và 22 kiểm thử trình duyệt desktop/mobile đều đạt. Lượt Node này bật cả hai trường hợp kiểm tra rollback bằng BSON/MongoDB thực qua `IELTS_UPDATE_GUARD_MONGO_CONTAINER=website-ielts-ai-mongo`; không có trường hợp bị bỏ qua.

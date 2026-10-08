@@ -136,6 +136,30 @@ for path,old in json.load(open(sys.argv[1])).items():
 PYVERIFY
 }
 mongo_exec() { docker exec -i "$mongo_id" mongosh --quiet --norc mongodb://127.0.0.1:27017/ielts_ai --eval "$1"; }
+# UPDATE_MONGO_INPUT_BEGIN
+mongo_exec_input() {
+  # mongosh makes pipe fd 0 nonblocking. Large fs.readFileSync(0) reads can
+  # throw EAGAIN, so upload only to this Mongo container's private temp file
+  # before giving the unchanged query/guard a regular-file stdin descriptor.
+  local input_bytes input_sha
+  [[ -f "$2" && ! -L "$2" ]] || return 1
+  input_bytes="$(wc -c < "$2")" || return 1
+  [[ "$input_bytes" =~ ^[0-9]+$ ]] && (( input_bytes > 0 && input_bytes <= 64 * 1024 * 1024 )) || return 1
+  input_sha="$(sha256sum -- "$2")" || return 1
+  input_sha="${input_sha%% *}"
+  docker exec -i "$mongo_id" sh -c '
+set -eu
+umask 077
+ielts_input="$(mktemp /tmp/ielts-update-input.XXXXXX)"
+trap '\''rm -f -- "$ielts_input"'\'' EXIT HUP INT TERM
+cat > "$ielts_input"
+[ "$(wc -c < "$ielts_input")" -eq "$2" ]
+ielts_digest="$(sha256sum -- "$ielts_input")"
+[ "${ielts_digest%% *}" = "$3" ]
+mongosh --quiet --norc mongodb://127.0.0.1:27017/ielts_ai --eval "$1" < "$ielts_input"
+' sh "$1" "$input_bytes" "$input_sha" < "$2"
+}
+# UPDATE_MONGO_INPUT_END
 preserve_ip_endpoint() {
   if curl --fail --silent --show-error --noproxy '*' --connect-timeout 5 --max-time 15 --cacert "$private_dir/tls/site.crt" --resolve "$public_host:$public_port:127.0.0.1" "https://$public_host:$public_port/api/health" -o "$audit_dir/ip-health.json" 2>/dev/null; then return 0; fi
   # Re-resolve only this project's upstream after app recreation. No host reload.
@@ -168,7 +192,7 @@ import json,sys
 before,manifest,out=sys.argv[1:]
 json.dump({'before':json.load(open(before)),'manifest':json.load(open(manifest))},open(out,'w'))
 PYINPUT
-  mongo_exec '/* UPDATE_ROLLBACK_GUARD_BEGIN */
+  mongo_exec_input '/* UPDATE_ROLLBACK_GUARD_BEGIN */
 const fs=require("fs"); const input=EJSON.parse(fs.readFileSync(0,"utf8"));
 const canonical=(value)=>{const plain=EJSON.serialize(value,{relaxed:true});const order=v=>Array.isArray(v)?v.map(order):v&&typeof v==="object"?Object.fromEntries(Object.keys(v).sort().map(k=>[k,order(v[k])])):v;return JSON.stringify(order(plain));};
 const added={};const oldIds=Object.fromEntries(Object.entries(input.before).map(([name,rows])=>[name,rows.map(d=>d._id)]));
@@ -182,7 +206,7 @@ if(db.attempts.countDocuments({contentId:{$nin:oldIds.content,$ne:null}})||db.ca
 // Audio and recording records reference attempts, already covered above.
 for(const name of ["content","vocabulary","placementItems"]){if(added[name].length)db.getCollection(name).deleteMany({_id:{$in:added[name]}});}
 print("Guarded rollback removed only verified public additions; learner collections untouched.");
-/* UPDATE_ROLLBACK_GUARD_END */' < "$audit_dir/rollback-input.json" > "$audit_dir/rollback-data.log" 2>&1
+/* UPDATE_ROLLBACK_GUARD_END */' "$audit_dir/rollback-input.json" > "$audit_dir/rollback-data.log" 2>&1
 }
 on_exit() {
   local code=$?; trap - EXIT; set +e
@@ -310,8 +334,8 @@ x=json.load(open(sys.argv[1]));assert x['status']=='ok' and x['database']=='mong
 targets={'lessons':480,'mocks':72,'vocabulary':648,'placement':576}
 assert all(type(x['bank'].get(name)) is int and x['bank'][name]>=count for name,count in targets.items())
 PYHEALTH
-mongo_exec 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(0,"utf8"));const result={};for(const name of ["content","vocabulary","placementItems"]){const ids=x[name].map(d=>d._id);const seeded=db.getCollection(name).countDocuments({_id:{$in:ids}});if(seeded!==ids.length)throw new Error("Seeded IDs missing");result[name]={seeded,total:db.getCollection(name).countDocuments()};}print(JSON.stringify(result));' < "$audit_dir/seed-manifest.json" > "$audit_dir/mongo-counts.json" 2> "$audit_dir/mongo-counts.log" || die 'Số ID học liệu thực trong MongoDB chưa đủ.'
-mongo_exec 'const fs=require("fs");const x=EJSON.parse(fs.readFileSync(0,"utf8"));for(const name of ["content","vocabulary","placementItems"]){const ids=x[name].map(d=>d._id);if(db.getCollection(name).countDocuments({_id:{$in:ids}})!==ids.length)throw new Error("Pre-existing public IDs missing");}print("All pre-existing public IDs retained.");' < "$audit_dir/public.before.ejson" > "$audit_dir/old-ids.log" 2>&1 || die 'Thiếu ID học liệu cũ.'
+mongo_exec_input 'const fs=require("fs");const x=JSON.parse(fs.readFileSync(0,"utf8"));const result={};for(const name of ["content","vocabulary","placementItems"]){const ids=x[name].map(d=>d._id);const seeded=db.getCollection(name).countDocuments({_id:{$in:ids}});if(seeded!==ids.length)throw new Error("Seeded IDs missing");result[name]={seeded,total:db.getCollection(name).countDocuments()};}print(JSON.stringify(result));' "$audit_dir/seed-manifest.json" > "$audit_dir/mongo-counts.json" 2> "$audit_dir/mongo-counts.log" || die 'Không xác minh được ID học liệu thực trong MongoDB; xem mongo-counts.log.'
+mongo_exec_input 'const fs=require("fs");const x=EJSON.parse(fs.readFileSync(0,"utf8"));for(const name of ["content","vocabulary","placementItems"]){const ids=x[name].map(d=>d._id);if(db.getCollection(name).countDocuments({_id:{$in:ids}})!==ids.length)throw new Error("Pre-existing public IDs missing");}print("All pre-existing public IDs retained.");' "$audit_dir/public.before.ejson" > "$audit_dir/old-ids.log" 2>&1 || die 'Không xác minh được ID học liệu cũ; xem old-ids.log.'
 curl_domain --fail "$origin/api/auth/me" -o "$audit_dir/auth.json"
 python3 - "$audit_dir/auth.json" <<'PYAUTH'
 import json,sys

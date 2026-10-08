@@ -10,6 +10,8 @@ import { BSON, MongoClient } from "mongodb";
 const script = readFileSync(new URL("../deploy/update.sh", import.meta.url), "utf8");
 const guard = script.match(/\/\* UPDATE_ROLLBACK_GUARD_BEGIN \*\/([\s\S]+?)\/\* UPDATE_ROLLBACK_GUARD_END \*\//)?.[1];
 assert.ok(guard, "Actual embedded MongoDB rollback guard must be testable");
+const mongoInputHelper = script.match(/# UPDATE_MONGO_INPUT_BEGIN\n([\s\S]+?)\n# UPDATE_MONGO_INPUT_END/)?.[1];
+assert.ok(mongoInputHelper, "The actual bounded regular-file Mongo input helper must be testable");
 type Row = Record<string, unknown>;
 function valuesAt(value: unknown, path: string[]): unknown[] {
   if (!path.length) return [value];
@@ -113,6 +115,25 @@ test("invalid archive identities and redirected live paths stop before any Docke
       assert.equal(result.status, 2, `Invalid input rejected by usage validation: ${args.join(" ")}`);
     }
     assert.ok(!readdirSync(directory).includes("docker.calls"), "No Docker build/up/stop/exec/tag can run on invalid input");
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("Mongo input validation rejects empty, oversized and redirected files before Docker", () => {
+  const directory = mkdtempSync(join(tmpdir(), "ielts-update-mongo-input-"));
+  try {
+    const empty = join(directory, "empty.json"); writeFileSync(empty, "");
+    const oversized = join(directory, "oversized.json");
+    const create = spawnSync("python3", ["-c", "import sys;f=open(sys.argv[1],'wb');f.truncate(64*1024*1024+1);f.close()", oversized]);
+    assert.equal(create.status, 0);
+    const link = join(directory, "redirect.json"); symlinkSync(empty, link);
+    const bin = join(directory, "bin"); mkdirSync(bin);
+    const calls = join(directory, "docker.calls");
+    writeFileSync(join(bin, "docker"), `#!/bin/bash\nprintf 'called' > '${calls}'\nexit 91\n`, { mode: 0o700 });
+    for (const input of [empty, oversized, link, join(directory, "missing.json")]) {
+      const result = spawnSync("bash", ["-c", `${mongoInputHelper}\nmongo_id=fixture;mongo_exec_input 'print("unreachable")' "$1"`, "ielts-input-test", input], { encoding: "utf8", env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+      assert.notEqual(result.status, 0);
+    }
+    assert.ok(!readdirSync(directory).includes("docker.calls"));
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -315,3 +336,49 @@ async function nativeGuardFixture(blockWithNewPlan: boolean) {
 }
 test("native MongoDB rollback compares canonical BSON numbers with plain manifest JSON and omitted optionals", { skip: !mongoContainer }, () => nativeGuardFixture(false));
 test("native MongoDB rollback rejects an old/new mixed plan array without changing any collection", { skip: !mongoContainer }, () => nativeGuardFixture(true));
+
+test("native regular-file helper verifies the complete multi-megabyte bank and executes large guarded rollback", { skip: !mongoContainer }, async () => {
+  assert.match(mongoContainer!, /^[a-zA-Z0-9_.-]+$/);
+  const databaseName = `ielts_update_guard_test_${process.pid}_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+  assert.match(databaseName, /^ielts_update_guard_test_[a-z0-9_]+$/);
+  const directory = mkdtempSync(join(tmpdir(), "ielts-update-whole-bank-"));
+  const client = new MongoClient("mongodb://127.0.0.1:27017", { serverSelectionTimeoutMS: 5000 });
+  await client.connect();
+  const database = client.db(databaseName);
+  try {
+    const { contentBank, vocabularyBank, placementBank } = await import("../server/data/index");
+    const manifest = JSON.parse(JSON.stringify({ content: contentBank.map(row => ({ ...row, _id: row.id })), vocabulary: vocabularyBank.map(row => ({ ...row, _id: row.id })), placementItems: placementBank.map(row => ({ ...row, _id: row.id })) })) as Record<string, Row[]>;
+    const manifestPath = join(directory, "manifest.json");
+    const manifestJson = JSON.stringify(manifest); writeFileSync(manifestPath, manifestJson);
+    assert.ok(Buffer.byteLength(manifestJson) > 7 * 1024 * 1024, "Exercise the actual full bank rather than small stdin fixtures");
+    const names = ["content", "vocabulary", "placementItems"];
+    const before = Object.fromEntries(names.map(name => [name, [manifest[name][0]]]));
+    for (const name of names) await database.collection(name).insertMany(manifest[name] as never[], { ignoreUndefined: true });
+    const learnerRows = { users: [{ _id: "learner", passwordHash: "private-test-value" }], attempts: [{ _id: "attempt", contentId: before.content[0]._id }], cards: [{ _id: "card", vocabularyId: before.vocabulary[0]._id }], placements: [{ _id: "placement", currentQuestionId: null, answers: [{ questionId: before.placementItems[0]._id }] }], plans: [{ _id: "plan", tasks: [{ contentId: before.content[0]._id }] }] };
+    for (const [name, rows] of Object.entries(learnerRows)) await database.collection(name).insertMany(rows as never[]);
+    const readLearners = async () => BSON.EJSON.stringify(Object.fromEntries(await Promise.all(Object.keys(learnerRows).map(async name => [name, await database.collection(name).find().sort({ _id: 1 }).toArray()]))), { relaxed: false });
+    const learnerBefore = await readLearners();
+    function executeInput(code: string, file: string) {
+      return spawnSync("bash", ["-c", `${mongoInputHelper}\nmongo_id="$1";mongo_exec_input "$2" "$3"`, "ielts-whole-bank-test", mongoContainer!, `db=db.getSiblingDB("${databaseName}");${code}`, file], { encoding: "utf8", timeout: 30000, maxBuffer: 1024 * 1024 });
+    }
+    const verify = executeInput('const fs=require("fs");const x=JSON.parse(fs.readFileSync(0,"utf8"));const result={};for(const name of ["content","vocabulary","placementItems"]){const ids=x[name].map(d=>d._id);const seeded=db.getCollection(name).countDocuments({_id:{$in:ids}});if(seeded!==ids.length)throw new Error("Seeded IDs missing");result[name]={seeded,total:db.getCollection(name).countDocuments()};}print(JSON.stringify(result));', manifestPath);
+    assert.equal(verify.status, 0, verify.stderr + verify.stdout);
+    assert.deepEqual(JSON.parse(verify.stdout.trim()), { content: { seeded: 552, total: 552 }, vocabulary: { seeded: 648, total: 648 }, placementItems: { seeded: 576, total: 576 } });
+    assert.equal(await readLearners(), learnerBefore, "Whole-bank verification is read-only");
+    const rollbackPath = join(directory, "rollback.json");
+    writeFileSync(rollbackPath, JSON.stringify({ before: JSON.parse(BSON.EJSON.stringify(before, { relaxed: false })), manifest }));
+    const rollback = executeInput(guard!, rollbackPath);
+    assert.equal(rollback.status, 0, rollback.stderr + rollback.stdout);
+    for (const name of names) {
+      const rows = await database.collection(name).find().toArray();
+      assert.equal(rows.length, 1); assert.equal(rows[0]._id, before[name][0]._id);
+    }
+    assert.equal(await readLearners(), learnerBefore, "Large guarded rollback never changes learner collections");
+    const cleanup = spawnSync("docker", ["exec", mongoContainer!, "sh", "-c", 'find /tmp -maxdepth 1 -name "ielts-update-input.*" -print'], { encoding: "utf8" });
+    assert.equal(cleanup.status, 0, cleanup.stderr); assert.equal(cleanup.stdout.trim(), "", "Staged files are removed after verification and rollback");
+  } finally {
+    assert.match(databaseName, /^ielts_update_guard_test_[a-z0-9_]+$/);
+    await database.dropDatabase(); await client.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
