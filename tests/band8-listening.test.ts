@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import { band8ListeningLessons, band8ListeningMocks } from '../server/data/band8/listening.js';
-import { contentBank } from '../server/data/index.js';
+import { contentBank } from '../server/data/previous-bank.js';
 import { gradeObjective } from '../server/learning.js';
 import { contentStructureIssues, withinAnswerLimit } from '../shared/content-visuals.js';
 import type { StoredContent } from '../shared/types.js';

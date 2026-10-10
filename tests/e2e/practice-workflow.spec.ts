@@ -34,20 +34,22 @@ async function answerQuestion(
   question: StoredQuestion,
   answer: string,
 ): Promise<void> {
-  const group = page.locator("fieldset.practice-question").filter({
-    has: page.locator("legend").filter({ hasText: question.prompt }),
-  });
-  await expect(group).toBeVisible();
   if (
     question.type === "text" ||
     (!question.options?.length &&
       !["true-false", "yes-no"].includes(question.type))
   ) {
-    await group
+    // Completion-block blanks retain their numbered accessible labels rather
+    // than duplicating an individual question legend for every row.
+    await page
       .getByRole("textbox", { name: `Câu ${question.number}`, exact: true })
       .fill(answer);
   } else {
-    await group.getByRole("radio", { name: radioName(answer) }).check();
+    const group = page.locator("fieldset.practice-question").filter({
+      has: page.locator("legend").filter({ hasText: question.prompt }),
+    });
+    await expect(group).toBeVisible();
+    await group.getByRole(question.type === "choice-multiple" ? "checkbox" : "radio", { name: radioName(answer) }).check();
   }
 }
 
@@ -153,7 +155,6 @@ test("library filters lead to a Reading lesson, saved answers, evidence, and an 
 }) => {
   await loginDemo(page);
   const content = await lesson(db, "reading", "lesson", {
-    topic: "Education",
     band: 3.5,
   });
   await navigate(page, "/library");
@@ -163,7 +164,7 @@ test("library filters lead to a Reading lesson, saved answers, evidence, and an 
     .getByRole("group", { name: "Lọc theo kỹ năng", exact: true })
     .getByRole("button", { name: "Reading", exact: true })
     .click();
-  await page.getByLabel("Chủ đề", { exact: true }).selectOption("Education");
+  await page.getByLabel("Chủ đề", { exact: true }).selectOption(content.topic);
   await page.getByLabel("Band bài tập", { exact: true }).selectOption("3.5");
   const card = page
     .locator("article.content-card")

@@ -66,10 +66,13 @@ test("real Duo HTTP: fixed identities, independent practice, owned graded proof 
     await request("a", "PATCH", "/profile", { name: "Another identity" }, 400);
     await request("a", "PATCH", "/profile", { targetBand: 7.5 }, 400);
     await request("a", "DELETE", "/account/history", { confirm: true }, 409);
-    const advanced = await database.content.findOne({ band: 8, skill: "reading", format: "full-mock" });
-    assert.ok(advanced, "Actual high-band mock exists in the seeded bank");
+    const advanced = await database.content.findOne({ band: 8, skill: "reading", format: "lesson" });
+    assert.ok(advanced, "Actual high-band Reading practice exists in the fresh bank");
     const ordinary = (await request("a", "POST", "/attempts", { contentId: advanced.id, mode: "exam" }, 201)).attempt as Attempt;
     assert.equal(ordinary.duoAssessmentId, undefined, "An ordinary exam works with only one logged-in participant");
+    const mock = await database.content.findOne({ skill: "reading", format: "full-mock" }); assert.ok(mock);
+    const ordinaryMock = (await request("a", "POST", "/attempts", { contentId: mock.id, mode: "exam" }, 201)).attempt as Attempt;
+    assert.equal(ordinaryMock.duoAssessmentId, undefined, "Full mocks are also available independently at every path stage");
     assert.equal((await snapshot()).path, null);
     async function placement(who: "a" | "b", correct: boolean): Promise<PlacementState> {
       let value = (await request(who, "POST", "/placement/start", { mode: "quick" }, 201)).placement as PlacementState;

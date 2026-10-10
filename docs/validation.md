@@ -1,5 +1,21 @@
 # Kết quả kiểm tra
 
+## Thay toàn bộ ngân hàng, giữ hai tài khoản — 2026-10-10
+
+Yêu cầu hiện hành thay thế việc giữ học liệu/lịch sử của các bản trước. Bộ `fresh-20261011` gồm **270 bài luyện, 36 đề mô phỏng, 216 mục từ và 160 câu placement** mới. Các mục bên dưới là lịch sử kiểm tra; số lượng và trạng thái triển khai cũ không mô tả bản reset này.
+
+`audit:content` và `audit:fresh` đạt: kiểm tra cấu trúc, dẫn chứng, giới hạn từ, dữ liệu hình vẽ, trùng nguồn/nội dung/số liệu và chấm **928 đáp án khách quan** bằng grader thực. Reading/Listening đủ dạng câu hỏi và cấu trúc đề; Writing đủ hai tasks và bảy dạng hình; Speaking đủ ba Parts. Nội dung có nhãn AI chưa được chuyên gia thẩm định; độ khó là ước lượng.
+
+**222/222 Node tests đạt, không skip**, gồm MongoDB thực, reset giữ chính xác hai danh tính/hash, backup canonical EJSON/metadata, phát hiện ghi đồng thời trước xóa, guard không trộn seed cũ và nhánh lỗi của updater. Trình duyệt desktop/mobile: 26 luồng không bị ảnh hưởng đạt trong lượt đầy đủ; bốn luồng Reading được sửa fixture cho nguồn và widget của bộ mới rồi chạy lại, **4/4 đạt**. Đây là 30 luồng đã kiểm tra, không phải một lượt cuối duy nhất 30/30.
+
+Entrypoint vận hành có thêm **25/25 kiểm tra** với Bash/Python thật và Docker/curl/mktemp được mô phỏng trong namespace tạm; chỉ ngữ cảnh quyền root được giả lập để chạy CI không đặc quyền. Kiểm tra từ chối sai project/danh tính/hash, giữ Unicode và ký tự shell nguyên văn, xác minh script SHA, không lộ credentials và dọn file private trên mọi nhánh lỗi. Đây là kiểm tra helper, không phải triển khai VPS.
+
+Native Docker reset CLI đạt trên MongoDB riêng: image readonly, không capability, `/tmp` noexec, giới hạn 512 MiB/0,5 CPU. Giữ nguyên hai ID/hash, xóa người thứ ba, reset profile và mọi collection học; kiểm tra 13 bản backup cùng SHA/quyền 0700/0600. Container có sẵn giữ nguyên ID và thời điểm khởi động. Không dùng database học viên để kiểm thử.
+
+Database development thật đã backup/reset và verify: đúng hai account, public data khớp bộ mới, dữ liệu riêng trống. Sau đó chạy thành công toàn bộ `scripts/cloud-setup.sh`: `npm ci` từ lockfile, MongoDB, hai audit, strict TypeScript/Vite build và seed; `bank:verify` vẫn đạt. API và Vite đã khởi động lại, `/api/health` báo MongoDB, phone-only Duo, demo tắt và bộ mới. Không tạo điểm/tiến độ giả để xác minh.
+
+**VPS chưa reset trong lượt này.** HTTPS công khai `sutonghanyu.vn/api/health` vẫn trả 544/84/744/640; SSH22 từ cloud bị từ chối. `deploy/run-bank-reset.sh` đọc cấu hình hash riêng từ đúng app đang chạy, tải/checksum `reset-bank.sh` ghim commit rồi truyền qua file private, tránh nhập lại hoặc đưa thông tin đăng nhập vào shell history. Lệnh dành cho phiên SSH hiện có của người dùng; chỉ receipt complete cùng hậu kiểm VPS mới xác nhận triển khai.
+
 ## Giao diện chiến dịch Hỏa + Mộc — 2026-10-08
 
 Production build TypeScript/Vite đạt. **30/30 Playwright tests** trên desktop 1440px và mobile 390px đạt, gồm toàn bộ 26 kiểm tra trước đó và bốn kiểm tra giao diện chiến dịch mới. Các trang đăng nhập, tổng quan, thư viện, thi thử, đầu vào, lộ trình, từ vựng, lịch sử, sổ lỗi và cài đặt tải được font/ảnh, không tràn ngang. Font Be Vietnam Pro tải được các trọng lượng dùng trong UI với mẫu tiếng Việt; các tiêu đề không dùng serif fallback hoặc khoảng cách chữ âm.

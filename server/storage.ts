@@ -16,7 +16,7 @@ import type {
   VocabularyEntry,
   Feedback,
 } from "../shared/types";
-import { contentBank, placementBank, vocabularyBank } from "./data/index";
+import { contentBank as contentBankDefault, placementBank as placementBankDefault, vocabularyBank as vocabularyBankDefault } from "./data/index";
 import { validateContentStructure } from "../shared/content-visuals";
 
 export interface UserRecord extends Profile {
@@ -157,7 +157,29 @@ export async function connectDatabase(
   }
 }
 
-export async function seedDatabase(database: Database): Promise<void> {
+export async function seedDatabase(database: Database, historicalFixture?: {
+  content: StoredContent[]; vocabulary: VocabularyEntry[]; placementItems: PlacementItem[];
+}): Promise<void> {
+  // Historical regression fixtures run only in disposable test databases.
+  // Normal startup must never blend the old public bank with the replacement.
+  if (historicalFixture && !/^ielts_ai_.*test_[a-f0-9]{32}$/.test(database.db.databaseName))
+    throw Error("Historical seed fixtures are restricted to isolated test databases.");
+  if (!historicalFixture) {
+    for (const name of ["content", "vocabulary", "placementItems"]) {
+      const rows = name === "content" ? contentBankDefault : name === "vocabulary" ? vocabularyBankDefault : placementBankDefault;
+      const collection = database.db.collection<{ _id: string }>(name);
+      const hasEarlierSeed = await collection.findOne({ _id: { $regex: "^(reading|listening|writing|speaking|grammar|mock|vocab|placement)-" } });
+      // A custom-only old database is also not a clean installation. Future
+      // personal AI content is allowed once the full active seed is present.
+      const hasOtherPublic = await collection.findOne({ _id: { $nin: rows.map(x => x.id) } });
+      const activeComplete = !hasOtherPublic || await collection.countDocuments({ _id: { $in: rows.map(x => x.id) } }) === rows.length;
+      if (hasEarlierSeed || !activeComplete)
+        throw Error("An earlier bank is present. Stop the IELTS app and run the scoped, backed-up bank reset before starting this release.");
+    }
+  }
+  const { content: contentBank, vocabulary: vocabularyBank, placementItems: placementBank } = historicalFixture ?? {
+    content: contentBankDefault, vocabulary: vocabularyBankDefault, placementItems: placementBankDefault,
+  };
   // Shared seed is idempotent and never touches private progress.
   // Validate the complete bank before writing the first public document.
   for (const content of contentBank) validateContentStructure(content);

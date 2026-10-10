@@ -8,9 +8,9 @@ Checkout là `/workspace/websiteIeltsAi`, repository GitHub `thaituegia/websiteI
 bash /workspace/websiteIeltsAi/scripts/cloud-setup.sh
 ```
 
-Script yêu cầu Node.js 24+, cài dependency đúng lockfile với cache `/workspace/.npm-cache`, start MongoDB Docker chính thức khi dùng URI local, audit nội dung/baseline/advanced, build frontend và seed. URI MongoDB bên ngoài và `.env` private được giữ; không in secrets. Seed **chỉ thêm ID chưa có**, giữ bản ghi seed đã sửa, nội dung ngoài seed và dữ liệu học.
+Script yêu cầu Node.js 24+, cài dependency đúng lockfile với cache `/workspace/.npm-cache`, start MongoDB Docker chính thức khi dùng URI local, audit nội dung/bộ mới, build frontend và seed. URI MongoDB bên ngoài và `.env` private được giữ; không in secrets. Seed **chỉ thêm ID mới chưa có**, giữ dữ liệu học của bộ hiện hành. Nếu còn ID seed cũ, startup dừng và yêu cầu công cụ reset riêng; setup thường không tự xóa database. Xem [bank-reset.md](bank-reset.md) cho yêu cầu reset đã được người dùng cho phép.
 
-Bộ seed hiện tại là **544 lessons, 84 mocks, 744 vocabulary, 640 placement**; baseline v3 **480/72/648/576** được giữ. Health báo MongoDB actual counts, có thể khác manifest nếu đã có nội dung riêng. Structural audits không chứng minh học liệu đã được chuyên gia IELTS hiệu chuẩn.
+Bộ seed hiện tại **fresh-20261011** gồm **270 lessons, 36 mocks, 216 vocabulary, 160 placement**. Health báo MongoDB actual counts, có thể khác manifest nếu đã có nội dung riêng. Structural audits không chứng minh học liệu đã được chuyên gia IELTS hiệu chuẩn.
 
 Docker/Compose cần có nếu dùng local helper; nếu không, cấu hình MongoDB thật bên ngoài qua `MONGODB_URI`. Không thay bằng SQLite, JSON hoặc in-memory DB. Image chính thức ghim digest trong `compose.yaml`; không tắt TLS/checksums để tải dependencies.
 
@@ -25,10 +25,10 @@ Startup xác minh cấu hình trước khi kết nối/seed; thiếu cấu hình
 ```sh
 cd /workspace/websiteIeltsAi
 npm run mongo:start
-npm run dev
+PORT=3006 API_PORT=3006 WEB_PORT=5173 npm run dev
 ```
 
-API mặc định cổng 3001, Vite 5173; bỏ helper nếu dùng MongoDB bên ngoài. Proxy giữ cookie và Origin cùng phía trình duyệt. `/api/health` qua Vite phải trả `status:ok`, `database:mongodb`, `duoEnabled:true`, `authMode:phone`, `demoEnabled:false` và counts thực. Provider flags chỉ là trạng thái cấu hình.
+Cấu hình cloud dùng API 3006, Vite 5173 (mặc định project API 3001); bỏ helper nếu dùng MongoDB bên ngoài. Proxy giữ cookie và Origin cùng phía trình duyệt. `/api/health` qua Vite phải trả `status:ok`, `database:mongodb`, `duoEnabled:true`, `authMode:phone`, `demoEnabled:false` và counts thực. Provider flags chỉ là trạng thái cấu hình.
 
 Cả hai có thể mở bài/đề thường riêng. Lộ trình chung chỉ tạo sau hai placements, bắt đầu từ band thấp hơn; điểm cá nhân không ghi đè band chung. Gate mặc định 5 buổi, có thể 10; hai người pass riêng mới mở chặng sau. Thi nâng band cần cả hai join/present/Ready. Kết quả đạt được bảo lưu và có Companion cho retake; backend đổi band chung đồng thời, trần 8.0. Cookie sessions/drafts/cards/placements/recordings và Duo receipts nằm trong MongoDB, không seed dữ liệu học giả.
 
@@ -37,8 +37,7 @@ Cả hai có thể mở bài/đề thường riêng. Lộ trình chung chỉ t�
 ```sh
 npm run typecheck
 npm run audit:content
-npm run audit:expansion
-npm run audit:band8
+npm run audit:fresh
 npm test
 npm run build
 npm run test:e2e

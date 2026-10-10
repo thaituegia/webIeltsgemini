@@ -313,7 +313,7 @@ console.log(
         })),
       distinctLessonSectionTexts: originalSectionTexts.size,
       notice:
-        "Checks validate structure, keyed answers and evidence spans. They do not establish psychometric calibration or expert review. Legacy mocks disclose reused lesson sections; new v3 mocks use independent source material.",
+        "Checks validate structure, keyed answers and evidence spans. They do not establish psychometric calibration or expert review. The active fresh bank uses independent sources for lessons and mocks; archived banks are audited separately.",
     },
     null,
     2,

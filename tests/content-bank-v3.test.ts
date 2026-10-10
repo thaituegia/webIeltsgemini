@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { test } from 'node:test';
 import { BSON } from 'mongodb';
 import { sanitizeContent } from '../server/app';
-import { contentBank, placementBank, vocabularyBank } from '../server/data/index';
+import { contentBank, placementBank, vocabularyBank } from '../server/data/previous-bank';
 import { readingLessons, listeningLessons, receptiveMocks, placementBank as legacyPlacement } from '../server/data/receptive';
 import { grammarLessons, writingLessons, speakingLessons, productiveMocks } from '../server/data/productive';
 import { vocabularyBank as legacyVocabulary } from '../server/data/vocabulary';
@@ -99,7 +99,7 @@ test('v3 Mongo seed preserves existing learner records and recordings, retains l
     });
     assert.deepEqual(await bytesOf(database, upload.id), recording);
 
-    await seedDatabase(database);
+    await seedDatabase(database, { content: contentBank, vocabulary: vocabularyBank, placementItems: placementBank });
     assert.deepEqual(await snapshotPrivate(database), before, 'first expansion modified a private record or recording metadata/chunk');
     assert.deepEqual(await bytesOf(database, upload.id), recording, 'first expansion changed recording bytes');
     const afterFirst = await Promise.all([
@@ -175,7 +175,7 @@ test('v3 Mongo seed preserves existing learner records and recordings, retains l
     }
     assert.ok(listeningWithLayout > 0, 'Listening exam must retain safe layouts while hiding the transcript');
 
-    await seedDatabase(database);
+    await seedDatabase(database, { content: contentBank, vocabulary: vocabularyBank, placementItems: placementBank });
     assert.deepEqual(await snapshotPrivate(database), before, 'repeat seed modified learner data');
     assert.deepEqual(await bytesOf(database, upload.id), recording, 'repeat seed changed recording bytes');
     const afterSecond = await Promise.all([

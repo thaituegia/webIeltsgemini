@@ -11,7 +11,6 @@ if node --import dotenv/config --input-type=module -e 'const uri=process.env.MON
   npm run mongo:start
 fi
 npm run audit:content
-npm run audit:expansion
-npm run audit:band8
+npm run audit:fresh
 npm run build
 npm run seed

@@ -241,7 +241,7 @@ test("native verifier spools the entire multi-megabyte seed plus old canonical r
   await client.connect();
   const database = client.db(databaseName);
   try {
-    const { v3ContentBank: contentBank, v3VocabularyBank: vocabularyBank, v3PlacementBank: placementBank } = await import("../server/data/index");
+    const { v3ContentBank: contentBank, v3VocabularyBank: vocabularyBank, v3PlacementBank: placementBank } = await import("../server/data/previous-bank");
     const manifest = JSON.parse(JSON.stringify({
       content: contentBank.map(row => ({ ...row, _id: row.id })),
       vocabulary: vocabularyBank.map(row => ({ ...row, _id: row.id })),

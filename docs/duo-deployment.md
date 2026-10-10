@@ -1,3 +1,5 @@
+> Updater dưới đây là quy trình lịch sử giữ dữ liệu của bộ cũ. Với yêu cầu clear toàn bộ và bộ fresh-20261011, dùng [bank-reset.md](bank-reset.md) và deploy/reset-bank.sh.
+
 # Cập nhật VPS sang Duo và mục tiêu 8.0
 
 `deploy/update-duo.sh` dành cho triển khai IELTS hiện có tại `/opt/websiteIeltsAi-20261007T172235Z-7D7gnc`, HTTPS `sutonghanyu.vn`, app nội bộ `127.0.0.1:19088`, endpoint IP HTTPS `8088`. Script từ chối nếu đường dẫn, quyền sở hữu root, Compose project, labels, origin hoặc cổng không khớp.

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { contentBank, vocabularyBank, placementBank, v3ContentBank, v3VocabularyBank, v3PlacementBank } from "../server/data/index.js";
+import { contentBank, vocabularyBank, placementBank, v3ContentBank, v3VocabularyBank, v3PlacementBank } from "../server/data/previous-bank.js";
 import { contentStructureIssues, withinAnswerLimit } from "../shared/content-visuals.js";
 import { gradeObjective } from "../server/learning.js";
 import type { ContentSection, PlacementItem, StoredContent, VisualAsset, VocabularyEntry } from "../shared/types.js";

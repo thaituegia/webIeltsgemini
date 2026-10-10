@@ -1,4 +1,15 @@
-# Ngân hàng học liệu IELTS v3
+# Ngân hàng đang dùng: fresh-20261011
+
+Seed runtime chỉ import các tệp `fresh/`: 270 bài luyện, 36 đề mô phỏng, 216 mục từ và 160 câu placement mới. Bộ trước được chuyển sang `previous-bank.ts` làm fixture lịch sử và đầu vào sàng lọc trùng lặp; app không seed bộ đó. Xem [quy trình reset](../../docs/bank-reset.md) và [README](../../README.md) cho số lượng/kiểm tra hiện hành. Dữ liệu cũ trong database được thay bằng công cụ backup/reset riêng theo yêu cầu người dùng, không bằng seed thường.
+
+```sh
+npm run audit:content
+npm run audit:fresh
+```
+
+Các đoạn dưới là tài liệu lịch sử v3, không mô tả seed hiện hành.
+
+## Lịch sử ngân hàng học liệu IELTS v3
 
 Phần mở rộng dựa trên danh mục trong `Tong_hop_cac_dang_bai_IELTS.docx`, được AI biên soạn trực tiếp thành dữ liệu của dự án. Không cần API key để seed bộ học liệu này. Địa danh, nhân vật, dự án và số liệu là hư cấu phục vụ luyện tập; không phải báo cáo nghiên cứu thực tế hoặc đề IELTS chính thức.
 

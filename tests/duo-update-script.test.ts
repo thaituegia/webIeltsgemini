@@ -643,7 +643,7 @@ test(
     const db = client.db(name);
     try {
       const { contentBank, vocabularyBank, placementBank } = await import(
-        "../server/data/index"
+        "../server/data/previous-bank"
       );
       state.manifest = JSON.parse(
         JSON.stringify({

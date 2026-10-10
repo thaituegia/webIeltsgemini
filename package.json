@@ -22,7 +22,10 @@
     "audit:expansion": "tsx scripts/audit-expanded-content.ts",
     "audit:band8": "tsx scripts/audit-band8.ts",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "audit:fresh": "tsx scripts/audit-fresh-bank.ts",
+    "bank:inspect": "tsx server/bank-reset-cli.ts inspect",
+    "bank:verify": "tsx server/bank-reset-cli.ts verify"
   },
   "dependencies": {
     "cookie-parser": "^1.4.7",

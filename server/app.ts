@@ -1,3 +1,4 @@
+import { bankVersion } from "./data/index";
 import express, {
   type Express,
   type NextFunction,
@@ -282,7 +283,7 @@ export function createApp(database: Database, config: AppConfig = {}): Express {
         duoEnabled,
         authMode: duoEnabled ? "phone" : "email",
         services: services(),
-        bank: { lessons, mocks, vocabulary, placement },
+        bank: { lessons, mocks, vocabulary, placement, version: bankVersion },
       });
     }),
   );

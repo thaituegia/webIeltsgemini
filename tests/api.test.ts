@@ -484,7 +484,9 @@ test(
                 responses: Object.fromEntries(
                   mock.questions.map((question) => [
                     question.id,
-                    question.answer,
+                    question.type === "choice-multiple"
+                      ? JSON.stringify(mock.questions.filter(other => other.selectionGroup?.id === question.selectionGroup?.id).map(other => other.answer))
+                      : question.answer,
                   ]),
                 ),
               }),

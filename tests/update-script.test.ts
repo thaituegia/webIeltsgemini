@@ -346,7 +346,7 @@ test("native regular-file helper verifies the complete multi-megabyte bank and e
   await client.connect();
   const database = client.db(databaseName);
   try {
-    const { v3ContentBank: contentBank, v3VocabularyBank: vocabularyBank, v3PlacementBank: placementBank } = await import("../server/data/index");
+    const { v3ContentBank: contentBank, v3VocabularyBank: vocabularyBank, v3PlacementBank: placementBank } = await import("../server/data/previous-bank");
     const manifest = JSON.parse(JSON.stringify({ content: contentBank.map(row => ({ ...row, _id: row.id })), vocabulary: vocabularyBank.map(row => ({ ...row, _id: row.id })), placementItems: placementBank.map(row => ({ ...row, _id: row.id })) })) as Record<string, Row[]>;
     const manifestPath = join(directory, "manifest.json");
     const manifestJson = JSON.stringify(manifest); writeFileSync(manifestPath, manifestJson);

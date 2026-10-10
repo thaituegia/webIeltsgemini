@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { test } from "node:test";
 import { BSON } from "mongodb";
 import { auditBand8, currentBand8Bank, jsonHash, v3BankAnchors, visualSignature } from "../scripts/audit-band8";
-import { contentBank, vocabularyBank, placementBank, v3ContentBank, v3VocabularyBank, v3PlacementBank } from "../server/data/index";
+import { contentBank, vocabularyBank, placementBank, v3ContentBank, v3VocabularyBank, v3PlacementBank } from "../server/data/previous-bank";
 import { connectDatabase, seedDatabase, type Database } from "../server/storage";
 import type { ChartVisual, SpatialVisual } from "../shared/types";
 
@@ -115,7 +115,7 @@ test("v4 Mongo seed preserves the entire v3 bank, edited existing IDs, custom re
     assert.deepEqual(publicBefore.map(rows => rows.length), [553, 649, 577]);
     let firstPublicHashes: string[] | undefined;
     for (let pass = 0; pass < 2; pass++) {
-      await seedDatabase(database);
+      await seedDatabase(database, { content: contentBank, vocabulary: vocabularyBank, placementItems: placementBank });
       assert.deepEqual(await snapshotPrivate(database), privateBefore, `Seed ${pass + 1} modified private BSON data`);
       assert.deepEqual(await recordingBytes(database, stream.id), recording, `Seed ${pass + 1} modified recording bytes`);
       const after = await Promise.all(publicCollections.map(name => database.db.collection(name).find().sort({ _id: 1 }).toArray()));
